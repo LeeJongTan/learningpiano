@@ -39,3 +39,26 @@ Tiến độ, sao, ngôn ngữ và cài đặt bàn phím được lưu trong lo
 ## Nguồn import
 
 Bản cloud phiên bản 6, source commit `1e03a8d84a8d8e1806daa03f7b48c08c92bf1e92`. Sáu file website được giữ nguyên nội dung và chuyển từ `dist/` ra thư mục gốc để phục vụ trực tiếp trên GitHub Pages. Các lần sửa trong GitHub và Sites cần được đồng bộ chủ động.
+
+
+## Câu hỏi tự luận và giao diện
+
+Mỗi bài có ô trả lời ngắn thay cho trắc nghiệm. `short-answers.js` chứa câu hỏi,
+nhóm từ khóa tương đương, gợi ý, đáp án mẫu và bộ kiểm tra. Mỗi nhóm ý phải có
+ít nhất một từ/cụm từ khớp; dấu tiếng Việt, chữ hoa/thường và một số cách ghi nốt
+được chuẩn hóa. Đây là kiểm tra theo từ khóa, không phải chấm ngữ nghĩa bằng AI.
+
+Sai lần 1 nhận động viên; lần 2 thêm gợi ý; lần 3 hiện đáp án mẫu. Xem đáp án
+không tự hoàn thành bài. Người học có thể trả lời lại không giới hạn; phải trả lời
+đúng và chơi đúng chuỗi nốt để ghi nhận bài học. Gửi ô trống hoặc lặp nguyên một
+đáp án không dùng thêm lượt. Bản nháp và số lượt được giữ khi đổi ngôn ngữ trong
+bài đang mở, và được đặt lại khi mở lại bài. Không gửi câu trả lời tới máy chủ.
+
+Ảnh chủ website cung cấp nằm ở `assets/piano-wave.png`. Bảng màu: `#FFA883`,
+`#FDE3C8`, `#FAF2E8`, `#6FC7E1`; chữ dùng sắc đậm để giữ độ tương phản.
+
+Chạy kiểm tra bộ chấm bằng Node.js:
+
+```sh
+node --test tests/short-answers.test.cjs
+```

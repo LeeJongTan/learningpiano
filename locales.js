@@ -79,3 +79,21 @@ Object.assign(window.PHIM_TEXT, {
  suggestFeature:['Đề xuất cải thiện','Suggest an improvement'],suggestText:['Chia sẻ phần bạn muốn học thêm, ví dụ cần rõ hơn hoặc tính năng giúp bạn luyện dễ hơn. Ý kiến của người mới học đặc biệt hữu ích.','Suggest a topic, an example that needs explaining, or a feature that would make practice easier. Beginner feedback is especially helpful.'],sendSuggestion:['Gửi đề xuất qua biểu mẫu','Suggest an improvement'],
  quickHelp:['Nếu chưa nghe thấy âm thanh','If you cannot hear sound'],quickHelpText:['Chạm trực tiếp một phím đàn để trình duyệt cho phép phát âm thanh. Kiểm tra âm lượng của thiết bị và thanh âm lượng trong Phòng tập.','Tap a piano key to let your browser enable audio. Check your device volume and the volume slider in the Practice room.']
 });
+
+// Short-answer lesson interface. Available in either interface language.
+Object.assign(window.PHIM_TEXT, {
+ heroImageAlt:['Bàn phím piano đen trắng uốn lượn như một dải ruy băng.','A black-and-white piano keyboard curving like a ribbon.'],
+ answerLabel:['Câu trả lời của bạn','Your answer'],
+ answerInstructions:['Viết ngắn gọn bằng lời của bạn, đủ các ý trong câu hỏi. Có thể dùng tiếng Việt hoặc tiếng Anh, có dấu hoặc không dấu.','Write a short answer in your own words and include each part of the question. Vietnamese or English, with or without accents, is accepted.'],
+ answerPolicy:['Sai lần 1: động viên · lần 2: gợi ý · lần 3: đáp án mẫu. Chấm theo từ khóa và ý chính, chưa đánh giá mọi cách diễn đạt.','1st miss: encouragement · 2nd: a hint · 3rd: a model answer. Checks use keywords and key ideas, so not every wording can be recognised.'],
+ answerSubmit:['Kiểm tra câu trả lời','Check my answer'],answerPassed:['Đã trả lời đúng','Answer accepted'],
+ answerAttempts:['Lần thử chưa đạt: {n}/3','Unsuccessful attempts: {n}/3'],
+ answerEmpty:['Bạn hãy viết câu trả lời trước nhé. Ô trống không tính là một lần sai.','Write your answer first. An empty answer does not count as a miss.'],
+ answerDuplicate:['Bạn đã thử câu này rồi. Hãy bổ sung hoặc đổi cách giải thích; gửi lại nguyên câu không tính thêm lần sai.','You have tried this answer already. Add an idea or rephrase it; submitting the same answer does not count as another miss.'],
+ answerEncourage:['Chưa đủ ý hoặc còn ý mâu thuẫn, nhưng không sao — bạn đang luyện suy luận! Đọc lại câu hỏi và thử diễn đạt rõ hơn nhé.','Some key ideas are missing or conflicting, and that is okay — this is practice! Read the question again and try making your answer clearer.'],
+ answerHintIntro:['Bạn đã cố gắng hai lần rồi. Thử dùng gợi ý này để nối các ý lại nhé.','You have given it two tries. Use this hint to connect the ideas.'],
+ answerRevealIntro:['Cùng xem một cách trả lời nhé. Hiểu vì sao rồi thử viết lại bằng lời của bạn.','Let’s look at one way to answer. Understand why, then try writing it in your own words.'],
+ answerHintTitle:['Gợi ý','Hint'],answerModelTitle:['Đáp án mẫu','Model answer'],
+ answerRetryAfterReveal:['Xem đáp án chưa tính là trả lời đúng. Bạn vẫn có thể nhập lại; không bị giới hạn số lần luyện.','Viewing the model does not count as a correct answer. You can keep trying with no attempt limit.'],
+ answerCorrect:['Đúng ý rồi! Bạn đã diễn đạt được kiến thức quan trọng.','You have the key ideas! You have explained the important knowledge.']
+});

@@ -37,7 +37,7 @@ const termsVI = [
 ];
 let lessonData, terms, routeTitles;
 function refreshLocale() {
-  lessonData = window.PHIM_COURSE.map(l => ({...l,...Object.fromEntries(['title','category','description','goals','theory','concept','question','options','reason','task'].map(k=>[k,L(l[k])])),options:[0,1,2].map(i=>L(l.options)[(i+l.id)%3]),correct:(l.correct-l.id%3+3)%3,duration:l.duration+' '+t('minutes'),color:['mint','sand','lilac'][(l.id-1)%3]}));
+  lessonData = window.PHIM_COURSE.map(l => ({...l,...Object.fromEntries(['title','category','description','goals','theory','concept','question','reason','task'].map(k=>[k,L(l[k])])),question:L(window.PHIM_SHORT_ANSWERS[l.id].question),rubric:window.PHIM_SHORT_ANSWERS[l.id],duration:l.duration+' '+t('minutes'),color:['mint','sand','lilac'][(l.id-1)%3]}));
   terms = state.language === 'en' ? window.PHIM_TERMS_EN : termsVI;
   routeTitles = Object.fromEntries(['home','learn','practice','song','library','feedback'].map(key => [key,t(key)]));
 }
@@ -52,7 +52,7 @@ function lessonCards(wide = false, list = lessonData.slice(0,3)) {
   return `<div class="lesson-grid ${wide ? 'wide-lessons' : ''}">${list.map(l => `<article class="lesson-card"><div class="lesson-art art-${l.color}"><span class="art-number">${pad(l.id)}</span>${lessonArt(l.id)}</div>${state.completed.includes(l.id) ? `<span class="done-badge" aria-label="${t('completed')}">${icon('check')}</span>` : ''}<div class="lesson-body"><div class="lesson-meta">${l.category} · ${t('lesson')} ${pad(l.id)}</div><h3><a href="#lesson-${l.id}" data-lesson="${l.id}">${l.title}</a></h3><p>${l.description}</p><div class="lesson-card-footer"><span class="lesson-duration">${icon('clock')}${l.duration}</span><button class="card-action" data-lesson="${l.id}" aria-label="${t('openLesson',{title:l.title})}">${icon(state.completed.includes(l.id) ? 'check' : 'arrow')}</button></div></div></article>`).join('')}</div>`;
 }
 function nextLesson() { return lessonData.find(l => !state.completed.includes(l.id))?.id || 1; }
-function heroArt() { return `<div class="hero-art" aria-hidden="true"><span class="float-note one">♪</span><span class="float-note two">♫</span><span class="float-note three">✦</span><div class="hero-piano"><div class="art-keys">${Array.from({length:10},(_,i)=>`<i class="${i===3?'highlight':''}"></i>`).join('')}${'<b></b>'.repeat(7)}</div></div><div class="art-tag"><span>♪</span> ${t('artTag')}</div></div>`; }
+function heroArt() { return `<div class="hero-art hero-art-photo"><img class="hero-image" src="./assets/piano-wave.png" width="236" height="337" alt="${t('heroImageAlt')}" fetchpriority="high" decoding="async"></div>`; }
 function homePage() {
   const n = state.completed.length, pct = Math.round(n / 12 * 100);
   return `<div class="page-heading"><div><h1>${t('welcome')}</h1><p>${t('welcomeSub')}</p></div></div>
@@ -235,7 +235,7 @@ let activeLesson=null,passed=false,returnFocus=null;
 let taskIndex=0, quizPassed=false;
 function lessonBody(id){
   const l=lessonData.find(x=>x.id===id);
-  return `<div class="learning-goal"><div><strong>${t('afterLesson')}</strong><ul>${l.goals.map(g=>`<li>${g}</li>`).join('')}</ul></div></div><section class="lesson-section"><h3>01. ${t('understand')}</h3>${l.theory.map(p=>`<p>${p}</p>`).join('')}<div class="concept-box">${l.concept}</div>${scoreFigure(l)}</section><section class="exercise"><span class="exercise-tag">02. ${t('checkUnderstanding')}</span><h3>${l.question}</h3><div class="answer-options">${l.options.map((v,i)=>`<button class="answer-option ${selectedAnswer===String(i)?(i===l.correct?'correct':'wrong'):''}" data-answer="${i}">${v}</button>`).join('')}</div><div class="exercise-feedback ${quizPassed?'success':''}" id="exercise-feedback" role="status">${selectedAnswer!==null?(quizPassed?t('correctGeneric'):t('tryAgain'))+' '+l.reason:''}</div></section><section class="lesson-section"><h3>03. ${t('apply')}</h3><p>${l.task}</p><button class="button soft" data-sound="course-${id}">${icon('volume')} ${t('listenExample')}</button><div class="task-track" aria-live="polite"><span data-task-count>${taskIndex}/${l.target.length}</span><strong data-task-next>${taskIndex>=l.target.length?t('taskDone'):t('nextNote',{note:noteName(l.target[taskIndex])})}</strong><button class="text-button" data-retry-task>${t('retryTask')}</button></div>${liveNote()}${keyboard()}<p class="storage-note">${t('practiceCheckLimit')}</p></section>`;
+  return `<div class="learning-goal"><div><strong>${t('afterLesson')}</strong><ul>${l.goals.map(g=>`<li>${g}</li>`).join('')}</ul></div></div><section class="lesson-section"><h3>01. ${t('understand')}</h3>${l.theory.map(p=>`<p>${p}</p>`).join('')}<div class="concept-box">${l.concept}</div>${scoreFigure(l)}</section>${shortAnswerHTML(l)}<section class="lesson-section"><h3>03. ${t('apply')}</h3><p>${l.task}</p><button class="button soft" data-sound="course-${id}">${icon('volume')} ${t('listenExample')}</button><div class="task-track" aria-live="polite"><span data-task-count>${taskIndex}/${l.target.length}</span><strong data-task-next>${taskIndex>=l.target.length?t('taskDone'):t('nextNote',{note:noteName(l.target[taskIndex])})}</strong><button class="text-button" data-retry-task>${t('retryTask')}</button></div>${liveNote()}${keyboard()}<p class="storage-note">${t('practiceCheckLimit')}</p></section>`;
 }
 function refreshPass(){passed=quizPassed&&taskIndex>=lessonData.find(l=>l.id===activeLesson).target.length;const b=$('#complete-lesson');if(b)b.disabled=!passed;}
 function advanceTask(midi){
@@ -288,7 +288,7 @@ function scoreFigure(l){
   return `<figure class="score-example"><figcaption><strong>${t('visualExample')} · ${l.title}</strong><span>${l.concept}</span></figcaption>${body}</figure>`;
 }
 
-let selectedAnswer=null, lessonCompletedView=false;
+let answerState=window.PHIM_ANSWER_CHECK.initial(), lessonCompletedView=false;
 function renderLesson(){
   const id=activeLesson,l=lessonData.find(x=>x.id===id);if(!l)return;
   if(lessonCompletedView){$('#lesson-content').innerHTML=completionHTML(id);return;}
@@ -298,16 +298,35 @@ function renderLesson(){
 function openLesson(id){
   if(!lessonData.some(x=>x.id===id))return;
   if($('#lesson-modal').hidden)returnFocus=document.activeElement;
-  cancelDemo();stopMetronome();activeLesson=id;passed=false;quizPassed=false;taskIndex=0;selectedAnswer=null;lessonCompletedView=false;renderLesson();
+  cancelDemo();stopMetronome();activeLesson=id;passed=false;quizPassed=false;taskIndex=0;answerState=window.PHIM_ANSWER_CHECK.initial();lessonCompletedView=false;renderLesson();
   $('#lesson-modal').hidden=false;document.body.style.overflow='hidden';$('.app-shell').inert=true;$('.sidebar').inert=true;$('.lesson-dialog').focus();$('#lesson-modal').scrollTop=0;
 }
 function closeLesson(){cancelDemo();activeLesson=null;$('#lesson-modal').hidden=true;document.body.style.overflow='';$('.app-shell').inert=false;$('.sidebar').inert=false;if(returnFocus?.isConnected)returnFocus.focus();else $('#main').focus({preventScroll:true});}
-function setFeedback(text,correct){const el=$('#exercise-feedback');if(!el)return;el.textContent=text;el.classList.toggle('success',correct);if(passed)$('#complete-lesson').disabled=false;}
-function answer(value,button){
-  if(!activeLesson)return;selectedAnswer=value;
-  const l=lessonData.find(l=>l.id===activeLesson),correct=Number(value)===l.correct;quizPassed=correct;refreshPass();
-  $$('.answer-option').forEach(b=>b.classList.remove('correct','wrong'));button.classList.add(correct?'correct':'wrong');
-  setFeedback((correct?t('correctGeneric'):t('tryAgain'))+' '+l.reason,correct);
+function escapeHTML(value) { return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
+function answerFeedbackHTML(l) {
+  let feedback='';
+  if(answerState.correct) feedback=`<p class="answer-success">${icon('check')} ${t('answerCorrect')}</p><p>${L(l.rubric.model)}</p><p>${l.reason}</p>`;
+  else if(answerState.attempts) {
+    feedback=`<p class="answer-encouragement">${t(answerState.attempts===1?'answerEncourage':answerState.attempts===2?'answerHintIntro':'answerRevealIntro')}</p>`;
+    if(answerState.attempts>=2)feedback+=`<div class="answer-hint"><strong>${t('answerHintTitle')}</strong><p>${L(l.rubric.hint)}</p></div>`;
+    if(answerState.attempts>=3)feedback+=`<div class="answer-model"><strong>${t('answerModelTitle')}</strong><p>${L(l.rubric.model)}</p><p>${l.reason}</p><small>${t('answerRetryAfterReveal')}</small></div>`;
+  }
+  if(answerState.notice)feedback+=`<p class="answer-notice">${t(answerState.notice)}</p>`;
+  return feedback;
+}
+function shortAnswerHTML(l) {
+  return `<section class="exercise short-answer-exercise"><span class="exercise-tag">02. ${t('checkUnderstanding')}</span><h3 id="answer-question">${l.question}</h3><form id="short-answer-form"><label class="answer-label" for="lesson-answer">${t('answerLabel')}</label><p class="answer-instructions" id="answer-instructions">${t('answerInstructions')}</p><textarea id="lesson-answer" name="answer" rows="3" maxlength="1200" aria-labelledby="answer-question answer-label-text" aria-describedby="answer-instructions answer-policy" ${answerState.correct?'readonly':''}>${escapeHTML(answerState.text)}</textarea><span id="answer-label-text" class="sr-only">${t('answerLabel')}</span><div class="answer-submit-row"><button type="submit" class="button" ${answerState.correct?'disabled':''}>${icon('check')} ${t(answerState.correct?'answerPassed':'answerSubmit')}</button><span class="answer-attempts">${t('answerAttempts',{n:Math.min(answerState.attempts,3)})}</span></div><p class="answer-policy" id="answer-policy">${t('answerPolicy')}</p></form><div class="exercise-feedback ${answerState.correct?'success':''}" id="exercise-feedback" role="status" aria-live="polite" aria-atomic="true">${answerFeedbackHTML(l)}</div></section>`;
+}
+function submitShortAnswer() {
+  if(!activeLesson)return;
+  const l=lessonData.find(l=>l.id===activeLesson),input=$('#lesson-answer');
+  if(!input||answerState.correct)return;
+  answerState=window.PHIM_ANSWER_CHECK.submit(answerState,input.value,l.rubric);
+  quizPassed=answerState.correct;refreshPass();
+  $('#exercise-feedback').innerHTML=answerFeedbackHTML(l);
+  $('#exercise-feedback').classList.toggle('success',quizPassed);
+  $('.answer-attempts').textContent=t('answerAttempts',{n:Math.min(answerState.attempts,3)});
+  if(quizPassed){input.readOnly=true;const button=$('#short-answer-form button');button.disabled=true;button.innerHTML=`${icon('check')} ${t('answerPassed')}`;}
 }
 
 function completionHTML(id){
@@ -342,13 +361,14 @@ document.addEventListener('click',event=>{
   if(event.target===$('#lesson-modal')){closeLesson();return;}
   const sound=event.target.closest('[data-sound]');if(sound){playSound(sound.dataset.sound).catch(()=>toast(t('audioError')));return;}
   const key=event.target.closest('[data-midi]');if(key){playKey(Number(key.dataset.midi)).catch(()=>toast(t('audioError')));return;}
-  const option=event.target.closest('[data-answer]');if(option){answer(option.dataset.answer,option);return;}
   if(event.target.closest('#complete-lesson')){completeLesson();return;}
   if(event.target.closest('#metro-toggle')){if(metroRunning)stopMetronome();else startMetronome().catch(()=>toast(t('metroError')));return;}
   if(event.target.closest('#rhythm-demo')){ensureAudio().then(ctx=>{if(!ctx)return;for(let i=0;i<4;i++)clickTone(ctx.currentTime+.05+i,i===0);}).catch(()=>toast('Chưa mở được âm thanh. Hãy thử lại.'));}
 });
 const normalise=text=>text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
+document.addEventListener('submit',event=>{if(event.target.id==='short-answer-form'){event.preventDefault();submitShortAnswer();}});
 document.addEventListener('input',event=>{
+  if(event.target.id==='lesson-answer')answerState.text=event.target.value;
   if(event.target.id==='volume')volume=Number(event.target.value)/100;
   if(event.target.id==='tempo'){tempo=Number(event.target.value);$('#bpm-display').textContent=tempo;}
   if(event.target.id==='term-search'){const q=normalise(event.target.value.trim());$('#terms-grid').innerHTML=termCards(terms.filter(t=>normalise(t.name+' '+t.en+' '+t.text).includes(q)));}
@@ -361,7 +381,7 @@ document.addEventListener('change',event=>{
 document.addEventListener('keydown',event=>{
   const modalOpen=!$('#lesson-modal').hidden;
   if(event.key==='Escape'&&modalOpen){closeLesson();return;}
-  if(event.key==='Tab'&&modalOpen){const controls=$$('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),[tabindex=\"0\"]',$('.lesson-dialog')).filter(el=>el.getClientRects().length);const first=controls[0],last=controls.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===$('.lesson-dialog'))){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}return;}
+  if(event.key==='Tab'&&modalOpen){const controls=$$('button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex=\"0\"]',$('.lesson-dialog')).filter(el=>el.getClientRects().length);const first=controls[0],last=controls.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===$('.lesson-dialog'))){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}return;}
   if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;
   if((modalOpen&&lessonCompletedView)||(!modalOpen&&!['practice','song'].includes(route)))return;
   const offset=pianoCodes.indexOf(event.code);
@@ -374,3 +394,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMetron
 window.addEventListener('pagehide',save);
 setInterval(()=>{if(!document.hidden&&route==='practice'&&$('#lesson-modal').hidden){state.practiceSeconds+=5;save();}},5000);
 render();
+
