@@ -7,16 +7,17 @@
   <meta name="description" content="Khám phá piano từ những nốt đầu tiên. Hiểu âm nhạc, lắng nghe và thực hành trên bàn phím tương tác.">
   <title>phím. — Hiểu rồi chơi</title>
   <link rel="icon" href="./assets/piano-logo.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=reading-20-v1">
-  <script src="./locales.js?v=reading-20-v1" defer></script>
-  <script src="./curriculum.js?v=reading-20-v1" defer></script>
-  <script src="./quiz-bank.js?v=reading-20-v1" defer></script>
-  <script src="./course-extension.js?v=reading-20-v1" defer></script>
-  <script src="./lesson-readings.js?v=reading-20-v1" defer></script>
-  <script src="./learner-state.js?v=reading-20-v1" defer></script>
-  <script src="./piano-audio.js?v=reading-20-v1" defer></script>
-  <script src="./lesson-flow.js?v=reading-20-v1" defer></script>
-  <script src="./app.js?v=reading-20-v1" defer></script>
+  <link rel="stylesheet" href="./styles.css?v=mobile-touch-v1">
+  <script src="./locales.js?v=mobile-touch-v1" defer></script>
+  <script src="./curriculum.js?v=mobile-touch-v1" defer></script>
+  <script src="./quiz-bank.js?v=mobile-touch-v1" defer></script>
+  <script src="./course-extension.js?v=mobile-touch-v1" defer></script>
+  <script src="./lesson-readings.js?v=mobile-touch-v1" defer></script>
+  <script src="./learner-state.js?v=mobile-touch-v1" defer></script>
+  <script src="./piano-audio.js?v=mobile-touch-v1" defer></script>
+  <script src="./lesson-flow.js?v=mobile-touch-v1" defer></script>
+  <script src="./piano-input.js?v=mobile-touch-v1" defer></script>
+  <script src="./app.js?v=mobile-touch-v1" defer></script>
 </head>
 <body>
   <svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -37,7 +38,8 @@
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
   </defs></svg>
   <a class="skip-link" href="#main">Đến nội dung chính</a>
-  <aside class="sidebar">
+  <div class="nav-backdrop" hidden aria-hidden="true"></div>
+  <aside class="sidebar" id="learning-navigation" tabindex="-1">
     <a href="#home" class="brand" aria-label="phím. Trang chủ"><img class="brand-logo" src="./assets/piano-logo.png" width="236" height="337" alt="" decoding="async"><span>phím<span class="orange">.</span></span></a>
     <span class="brand-caption">HIỂU RỒI CHƠI</span>
     <div class="nav-label">KHÔNG GIAN HỌC TẬP</div>
@@ -54,7 +56,7 @@
     <div class="sidebar-bottom"><span class="profile-avatar">♪</span><div><strong>Người bạn mới</strong><span>Hành trình vừa bắt đầu</span></div><span class="online-dot"></span></div>
   </aside>
   <div class="app-shell">
-    <header class="topbar"><div class="breadcrumb"><span data-copy="yourSpace">Không gian của bạn</span> <span>/</span> <strong id="breadcrumb">Tổng quan</strong></div><div class="topbar-right"><label class="language-picker"><span data-copy="language">Ngôn ngữ / Language</span><select data-language aria-label="Ngôn ngữ / Language"><option value="vi" lang="vi">Tiếng Việt</option><option value="en" lang="en">English</option></select></label><span class="prototype-badge"><i></i> <span data-copy="prototype">Bản trải nghiệm</span></span><a class="header-logo" href="#home" aria-label="phím. Trang chủ"><img src="./assets/piano-logo.png" width="236" height="337" alt="" decoding="async"></a></div></header>
+    <header class="topbar"><button type="button" id="mobile-menu-toggle" aria-controls="learning-navigation" aria-expanded="false"><svg aria-hidden="true"><use href="#i-path"/></svg><span data-copy="space">KHÔNG GIAN HỌC TẬP</span></button><div class="breadcrumb"><span data-copy="yourSpace">Không gian của bạn</span> <span>/</span> <strong id="breadcrumb">Tổng quan</strong></div><div class="topbar-right"><label class="language-picker"><span data-copy="language">Ngôn ngữ / Language</span><select data-language aria-label="Ngôn ngữ / Language"><option value="vi" lang="vi">Tiếng Việt</option><option value="en" lang="en">English</option></select></label><span class="prototype-badge"><i></i> <span data-copy="prototype">Bản trải nghiệm</span></span><a class="header-logo" href="#home" aria-label="phím. Trang chủ"><img src="./assets/piano-logo.png" width="236" height="337" alt="" decoding="async"></a></div></header>
     <main id="main" tabindex="-1"></main>
     <footer class="footer"><span>phím. <span class="muted">— Âm nhạc bắt đầu từ sự thấu hiểu.</span></span><span>Được tạo với một chút tò mò <span class="orange">✦</span></span></footer>
   </div>

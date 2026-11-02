@@ -49,7 +49,7 @@ function nextLesson(){return state.sessions[state.lastLesson]&&FLOW.canOpen(stat
 function homePage() {
   const n = state.completed.length, pct = Math.round(n / COURSE_TOTAL * 100);
   return `<div class="page-heading"><div><h1>${state.profile.displayName?t('welcomeNamed',{name:escapeHTML(state.profile.displayName)}):t('welcome')}</h1><p>${t('welcomeSub')}</p></div></div>
-  <section class="hero hero-copy-only"><div class="hero-copy"><div class="eyebrow"><span class="line"></span> ${t('heroEyebrow')}</div><h2>${t('heroTitle')}<br><span>${t('heroTitle2')}</span></h2><p>${t('heroDescription')}</p>${resumeSummary()}<div class="hero-actions"><button class="button" data-lesson="${nextLesson()}">${t(state.sessions[nextLesson()]?'continue':n===0?'start':n===COURSE_TOTAL?'review':'continue')} ${icon('arrow')}</button></div></div></section>
+  <section class="hero hero-copy-only hero-with-quote"><div class="hero-copy"><div class="eyebrow"><span class="line"></span> ${t('heroEyebrow')}</div><h2>${t('heroTitle')}<br><span>${t('heroTitle2')}</span></h2><p>${t('heroDescription')}</p>${resumeSummary()}<div class="hero-actions"><button class="button" data-lesson="${nextLesson()}">${t(state.sessions[nextLesson()]?'continue':n===0?'start':n===COURSE_TOTAL?'review':'continue')} ${icon('arrow')}</button></div></div><figure class="hero-quote"><blockquote lang="en"><p>“To play a wrong note is insignificant; to play without passion is inexcusable!”</p></blockquote><p class="quote-translation" lang="vi">(Chơi sai một nốt nhạc chẳng có gì là quan trọng; nhưng chơi không có cảm xúc thì không thể tha thứ được!)</p><figcaption>-Ludwig van Beethoven-</figcaption></figure></section>
   <div class="overview-grid"><div><section aria-labelledby="first-lessons"><div class="section-heading"><div><h2 id="first-lessons">${t('firstSteps')}</h2><p>${t('firstSub')}</p></div><a class="section-link" href="#learn">${t('viewPath')} ${icon('arrow')}</a></div>${lessonCards()}</section><a class="practice-teaser" href="#practice"><span class="teaser-icon">${icon('piano')}</span><div class="teaser-copy"><h3>${t('teaserTitle')}</h3><p>${t('teaserSub')}</p></div><span class="small-pill">${t('freePractice')}</span>${icon('arrow')}</a></div>
   <aside class="side-stack"><section class="progress-card"><div class="widget-label">${t('stepByStep')}</div><div class="progress-title"><h3>${t('seed')}</h3><span>${pct}%</span></div><div class="progress-track" role="progressbar" aria-label="${t('progressLabel')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div><div class="progress-detail"><span>${t('lessonsCompleted',{n})}</span><span>${t('intro')}</span></div><div class="progress-sub"><div><strong>${n}<small> / ${COURSE_TOTAL}</small></strong><span>${t('understood')}</span></div><div><strong>${Math.floor(state.practiceSeconds / 60)}<small> ${t('minutes')}</small></strong><span>${t('timePractising')}</span></div></div></section><section class="thought-card"><div class="thought-header">${icon('spark')} ${t('curious')}</div><blockquote>${t('octaveQuestion')}</blockquote><a href="#library" class="section-link">${t('discoverOctave')} ${icon('arrow')}</a></section></aside></div>`;
 }
@@ -75,7 +75,7 @@ function keyboard() {
   const whites=[],blacks=[];
   for(let m=base;m<=end;m++){if([0,2,4,5,7,9,11].includes(m%12))whites.push(m);else blacks.push({m,p:whites.length});}
   const count=whites.length;
-  return `<div data-keyboard-region><div class="keyboard-toolbar"><div class="octave-shift"><button data-shift="-1" aria-label="${t('lower')}" ${state.keyboardStart<=1?'disabled':''}>− <span>${t('lowerShort')}</span></button><strong data-keyboard-range aria-live="polite">C${state.keyboardStart} — C${state.keyboardStart+state.keyboardOctaves}</strong><button data-shift="1" aria-label="${t('higher')}" ${state.keyboardStart>=8-state.keyboardOctaves?'disabled':''}><span>${t('higherShort')}</span> +</button></div><label class="octave-length"><span>${t('visibleRange')}</span><select data-octaves aria-label="${t('visibleRange')}">${[1,2,3].map(n=>`<option value="${n}" ${state.keyboardOctaves===n?'selected':''}>${t('octaves',{n})}</option>`).join('')}</select></label></div><div class="keyboard-scroll" style="--white-count:${count}" tabindex="0" role="region" aria-label="${t('pianoGroup',{start:state.keyboardStart,end:state.keyboardStart+state.keyboardOctaves})}"><div class="keyboard-wrap"><div class="piano-keyboard" style="--white-count:${count}" role="group" aria-label="${t('pianoGroup',{start:state.keyboardStart,end:state.keyboardStart+state.keyboardOctaves})}">${whites.map(m=>`<button class="piano-key white-key" data-midi="${m}" aria-label="${solfege(m)} ${noteName(m)}"><span class="key-name" ${state.showLabels?'':'hidden'}>${m%12===0?noteName(m):noteNames[m%12]}</span><span class="key-shortcut">${relativeShortcuts[m-base]??''}</span></button>`).join('')}${blacks.map(({m,p})=>`<button class="piano-key black-key" data-midi="${m}" style="left:calc(${p/count*100}% - 100% / ${count} * .32)" aria-label="${solfege(m)} ${noteName(m)}"><span class="key-name" ${state.showLabels?'':'hidden'}>${noteNames[m%12]}</span><span class="key-shortcut">${relativeShortcuts[m-base]??''}</span></button>`).join('')}</div></div></div><p class="keyboard-caption">${t('keyboardHint')}<br><span class="keyboard-swipe-hint">${t('keyboardScroll')} </span>${t('simulation')}</p><details class="keymap"><summary>${t('keymapTitle')}</summary>${[0,1,2].slice(0,state.keyboardOctaves).map(i=>`<p><strong>C${state.keyboardStart+i}–B${state.keyboardStart+i}</strong> ${shortcutLabels.slice(i*12,i*12+12).map((k,j)=>`<span>${noteNames[j]} <kbd>${k}</kbd></span>`).join('')}</p>`).join('')}<p>C${state.keyboardStart+state.keyboardOctaves} <kbd>${relativeShortcuts[state.keyboardOctaves*12]}</kbd></p></details></div>`;
+  return `<div data-keyboard-region><div class="keyboard-toolbar"><div class="octave-shift"><button data-shift="-1" aria-label="${t('lower')}" ${state.keyboardStart<=1?'disabled':''}>− <span>${t('lowerShort')}</span></button><strong data-keyboard-range aria-live="polite">C${state.keyboardStart} — C${state.keyboardStart+state.keyboardOctaves}</strong><button data-shift="1" aria-label="${t('higher')}" ${state.keyboardStart>=8-state.keyboardOctaves?'disabled':''}><span>${t('higherShort')}</span> +</button></div><label class="octave-length"><span>${t('visibleRange')}</span><select data-octaves aria-label="${t('visibleRange')}">${[1,2,3].map(n=>`<option value="${n}" ${state.keyboardOctaves===n?'selected':''}>${t('octaves',{n})}</option>`).join('')}</select></label></div><div class="keyboard-scroll" style="--white-count:${count}" tabindex="0" role="region" aria-label="${t('pianoGroup',{start:state.keyboardStart,end:state.keyboardStart+state.keyboardOctaves})}"><div class="keyboard-pan-handle">${t('keyboardPan')}</div><div class="keyboard-wrap"><div class="piano-keyboard" style="--white-count:${count}" role="group" aria-label="${t('pianoGroup',{start:state.keyboardStart,end:state.keyboardStart+state.keyboardOctaves})}">${whites.map(m=>`<button class="piano-key white-key" data-midi="${m}" aria-label="${solfege(m)} ${noteName(m)}"><span class="key-name" ${state.showLabels?'':'hidden'}>${m%12===0?noteName(m):noteNames[m%12]}</span><span class="key-shortcut">${relativeShortcuts[m-base]??''}</span></button>`).join('')}${blacks.map(({m,p})=>`<button class="piano-key black-key" data-midi="${m}" style="left:calc(${p/count*100}% - 100% / ${count} * .32)" aria-label="${solfege(m)} ${noteName(m)}"><span class="key-name" ${state.showLabels?'':'hidden'}>${noteNames[m%12]}</span><span class="key-shortcut">${relativeShortcuts[m-base]??''}</span></button>`).join('')}</div></div></div><p class="keyboard-caption">${t('keyboardHint')}<br><span class="keyboard-swipe-hint">${t('keyboardScroll')} </span>${t('simulation')}</p><details class="keymap"><summary>${t('keymapTitle')}</summary>${[0,1,2].slice(0,state.keyboardOctaves).map(i=>`<p><strong>C${state.keyboardStart+i}–B${state.keyboardStart+i}</strong> ${shortcutLabels.slice(i*12,i*12+12).map((k,j)=>`<span>${noteNames[j]} <kbd>${k}</kbd></span>`).join('')}</p>`).join('')}<p>C${state.keyboardStart+state.keyboardOctaves} <kbd>${relativeShortcuts[state.keyboardOctaves*12]}</kbd></p></details></div>`;
 }
 function updateKeyboard(focusSelector) {
   cancelDemo();songPractising=false;save();$$('[data-keyboard-region]').forEach(el=>{el.outerHTML=keyboard();});
@@ -90,7 +90,7 @@ function shiftKeyboard(delta) {
 }
 function liveNote() { return `<div class="live-note" aria-live="polite"><strong data-note-display>—</strong><div><span data-note-name>${t('playNote')}</span><small data-note-detail>${t('listenPitch')}</small></div></div>`; }
 function metronome() { return `<section class="metronome-card"><h2>${t('metroTitle')}</h2><p>${t('metroSub')}</p><div class="bpm-number" id="bpm-display">${tempo}</div><div class="bpm-label">BPM</div><input class="tempo-slider" type="range" min="40" max="160" value="${tempo}" id="tempo" aria-label="${t('tempoLabel')}"><div class="tempo-labels"><span>40 · ${t('slow')}</span><span>160 · ${t('fast')}</span></div><div class="beat-dots" aria-hidden="true">${[1,2,3,4].map(i=>`<span class="beat-dot">${i}</span>`).join('')}</div><button class="button dark" id="metro-toggle">${icon('play')} ${t('startMetro')}</button><div class="metronome-hint">${t('metroHint')}</div></section>`; }
-function practicePage() { return `<div class="page-intro"><div class="eyebrow">${t('practiceEyebrow')}</div><h1>${t('practiceTitle')}</h1><p>${t('practiceSub')}</p></div><div class="studio-layout"><section class="studio-panel"><div class="studio-header"><h2>${t('keyboardTitle')}</h2><span data-full-range>${keyboardRange()}</span></div>${liveNote()}${keyboard()}<div class="studio-controls"><label class="volume-control">${icon('volume')}<input type="range" min="0" max="100" value="${volume*100}" id="volume" aria-label="${t('volume')}"></label><label class="switch-label"><input type="checkbox" id="show-labels" ${state.showLabels?'checked':''}> ${t('labels')}</label></div><div class="chord-section"><p>${t('colours')}</p><div class="chord-buttons"><button data-sound="major">${t('cMajor')} · C–E–G</button><button data-sound="minor">${t('cMinor')} · C–E♭–G</button><button data-sound="scale">${t('cScale')}</button></div><p class="chord-explanation" id="chord-explanation">${t('chordPrompt')}</p></div></section>${metronome()}</div><div class="practice-callout"><span>✦</span><div><strong>${t('littleExperiment')}</strong><p>${t('experiment')}</p></div></div><a class="section-link" href="#song">${t('trySong')} ${icon('arrow')}</a><p class="storage-note">${t(storageOK?'localStorage':'storageBlocked')}</p>`; }
+function practicePage() { return `<div class="page-intro"><div class="eyebrow">${t('practiceEyebrow')}</div><h1>${t('practiceTitle')}</h1><p>${t('practiceSub')}</p></div><aside class="audio-tip">${icon('volume')}<p>${t('ringerTip')}</p></aside><div class="studio-layout"><section class="studio-panel"><div class="studio-header"><h2>${t('keyboardTitle')}</h2><span data-full-range>${keyboardRange()}</span></div>${liveNote()}${keyboard()}<div class="studio-controls"><label class="volume-control">${icon('volume')}<input type="range" min="0" max="100" value="${volume*100}" id="volume" aria-label="${t('volume')}"></label><label class="switch-label"><input type="checkbox" id="show-labels" ${state.showLabels?'checked':''}> ${t('labels')}</label></div><div class="chord-section"><p>${t('colours')}</p><div class="chord-buttons"><button data-sound="major">${t('cMajor')} · C–E–G</button><button data-sound="minor">${t('cMinor')} · C–E♭–G</button><button data-sound="scale">${t('cScale')}</button></div><p class="chord-explanation" id="chord-explanation">${t('chordPrompt')}</p></div></section>${metronome()}</div><div class="practice-callout"><span>✦</span><div><strong>${t('littleExperiment')}</strong><p>${t('experiment')}</p></div></div><a class="section-link" href="#song">${t('trySong')} ${icon('arrow')}</a><p class="storage-note">${t(storageOK?'localStorage':'storageBlocked')}</p>`; }
 const BUG_REPORT_URL='https://docs.google.com/forms/d/e/1FAIpQLScU4hfwG1GKvfNRginUifTrDEUrRqBJvGkXlnO14zVv0DmVLQ/viewform?usp=dialog';
 const IMPROVEMENT_URL='https://docs.google.com/forms/d/e/1FAIpQLScGwrWh-jKMniqEQHdy7c8bPcGN6jcoF_fU2n79hbCnQ6LDUw/viewform?usp=dialog';
 let songPhrase=0,songIndex=0,songPractising=false;
@@ -167,12 +167,13 @@ function render() {
   document.title = `${routeTitles[route]} · phím. — ${state.language==='en'?'Understand, then play':'Hiểu rồi chơi'}`;
 }
 
+let pianoInput=null;
 let audioCtx,audioOutput, volume = state.volume, soundGeneration = 0, activeNodes = new Set();
 async function ensureAudio() {
   const AudioCtor = window.AudioContext || window.webkitAudioContext;
   if(!AudioCtor) { toast(t('audioUnavailable')); return null; }
-  if(!audioCtx){audioCtx=new AudioCtor();audioOutput=audioCtx.createDynamicsCompressor();audioOutput.threshold.value=-12;audioOutput.knee.value=12;audioOutput.ratio.value=8;audioOutput.attack.value=.003;audioOutput.release.value=.18;audioOutput.connect(audioCtx.destination);}
-  if(audioCtx.state === 'suspended') await audioCtx.resume();
+  if(!audioCtx||audioCtx.state==='closed'){audioCtx=new AudioCtor();audioOutput=audioCtx.createDynamicsCompressor();audioOutput.threshold.value=-12;audioOutput.knee.value=12;audioOutput.ratio.value=8;audioOutput.attack.value=.003;audioOutput.release.value=.18;audioOutput.connect(audioCtx.destination);}
+  if(audioCtx.state!=='running')await audioCtx.resume();
   return audioCtx;
 }
 function tone(midi, when, duration = 1.2, strength = 1) {
@@ -192,7 +193,7 @@ function tone(midi, when, duration = 1.2, strength = 1) {
   });
 }
 function flash(midi) {
-  $$(`[data-midi="${midi}"]`).forEach(key=>{key.classList.add('pressed');setTimeout(()=>key.classList.remove('pressed'),260);});
+  $$(`[data-midi="${midi}"]`).forEach(key=>{key.classList.add('pressed');setTimeout(()=>{if(!pianoInput?.isHeld(midi))key.classList.remove('pressed');},260);});
 }
 function showNote(midi) {
   $$('[data-note-display]').forEach(el=>el.textContent=noteName(midi));
@@ -204,7 +205,7 @@ async function playKey(midi){
   if(activeLesson&&!lessonCompletedView)advanceTask(midi);
   else if(route==='song'&&songPractising)advanceSong(midi);
   flash(midi);showNote(midi);
-  const ctx=await ensureAudio();if(ctx)tone(midi,ctx.currentTime);
+  const generation=soundGeneration,ctx=await ensureAudio();if(ctx&&generation===soundGeneration)tone(midi,ctx.currentTime);
 }
 async function playSound(kind) {
   const ctx=await ensureAudio();if(!ctx)return;
@@ -226,7 +227,7 @@ async function playSound(kind) {
   if($('#chord-explanation')&&explanations[kind])$('#chord-explanation').textContent=explanations[kind];
   $$('.chord-buttons button').forEach(b=>b.classList.toggle('active',b.dataset.sound===kind));
 }
-function cancelDemo(){soundGeneration++;if(audioCtx){for(const node of activeNodes){try{node.stop();}catch{}}activeNodes.clear();}}
+function cancelDemo(){pianoInput?.clear();soundGeneration++;if(audioCtx){for(const node of activeNodes){try{node.stop();}catch{}}activeNodes.clear();}}
 let tempo=60,metroRunning=false,metroTimer=null,metroBeat=0,metroNextTime=0,metroGeneration=0;
 async function startMetronome(){
   const ctx=await ensureAudio();if(!ctx)return;
@@ -389,6 +390,7 @@ function openLesson(id){
  if(!FLOW.canOpen(id,state.completed,COURSE_TOTAL)){toast(t('lockedUntil',{n:id-1}));return;}
  if(activeLesson)persistLesson();
  if($('#lesson-modal').hidden)returnFocus=document.activeElement;
+ setLearningMenu(false);
  cancelDemo();stopMetronome();activeLesson=id;passed=false;lessonCompletedView=false;
  lessonFlow=state.sessions[id]?.flow||FLOW.initial();
  // A resumed assessment starts its current uninterrupted keyboard run afresh.
@@ -398,7 +400,7 @@ function openLesson(id){
  persistLesson();renderLesson();
  $('#lesson-modal').hidden=false;document.body.style.overflow='hidden';$('.app-shell').inert=true;$('.sidebar').inert=true;$('.lesson-page').focus();
 }
-function closeLesson(){persistLesson();cancelDemo();activeLesson=null;$('#lesson-modal').hidden=true;document.body.style.overflow='';$('.app-shell').inert=false;$('.sidebar').inert=false;render();if(returnFocus?.isConnected)returnFocus.focus();else $('#main').focus({preventScroll:true});}
+function closeLesson(){persistLesson();cancelDemo();activeLesson=null;$('#lesson-modal').hidden=true;document.body.style.overflow='';$('.app-shell').inert=false;setLearningMenu(false);render();if(returnFocus?.isConnected)returnFocus.focus();else $('#main').focus({preventScroll:true});}
 function moveReading(index){
  if(!activeLesson)return;const steps=window.PHIM_READINGS[activeLesson];
  const next=FLOW.readStep(lessonFlow,index,steps.length);if(next===lessonFlow)return;
@@ -436,6 +438,28 @@ function changeLanguage(language){
   else $('[data-language]',$('.topbar')).focus({preventScroll:true});
 }
 
+function setLearningMenu(open,restoreFocus=false){
+ const toggle=$('#mobile-menu-toggle'),sidebar=$('.sidebar'),mobile=matchMedia('(max-width:720px)').matches;
+ const expanded=mobile&&open;sidebar.classList.toggle('is-open',expanded);toggle.setAttribute('aria-expanded',String(expanded));
+ $('.nav-backdrop').hidden=!expanded;document.body.classList.toggle('learning-menu-open',expanded);
+ sidebar.inert=!$('#lesson-modal').hidden||(mobile&&!expanded);
+ if(restoreFocus&&mobile)toggle.focus({preventScroll:true});
+}
+$('#mobile-menu-toggle').addEventListener('click',()=>setLearningMenu($('#mobile-menu-toggle').getAttribute('aria-expanded')!=='true'));
+$('.nav-backdrop').addEventListener('click',()=>setLearningMenu(false,true));
+$('.main-nav').addEventListener('click',event=>{
+ const link=event.target.closest('a');if(!link||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+ event.preventDefault();const hash=link.getAttribute('href');setLearningMenu(false);
+ if(location.hash!==hash)location.hash=hash;else $('#main').focus({preventScroll:true});
+});
+const navigationMedia=matchMedia('(max-width:720px)');
+if(navigationMedia.addEventListener)navigationMedia.addEventListener('change',()=>setLearningMenu(false));else navigationMedia.addListener(()=>setLearningMenu(false));
+pianoInput=window.PHIM_PIANO_INPUT.attach({target:document,pointerEvents:'PointerEvent' in window,
+ onPress:midi=>{playKey(midi).catch(()=>toast(t('audioError')));},
+ onRelease:midi=>{$$(`[data-midi="${midi}"]`).forEach(key=>key.classList.remove('pressed'));}
+});
+window.addEventListener('blur',()=>pianoInput.clear());
+setLearningMenu(false);
 let toastTimer;
 function toast(text){$('#toast').textContent=text;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,4000);}
 document.addEventListener('click',event=>{
@@ -461,7 +485,7 @@ document.addEventListener('click',event=>{
   if(event.target.closest('.close-modal,[data-close]')){closeLesson();return;}
   if(event.target.closest('[data-close-route]')){closeLesson();return;}
   const sound=event.target.closest('[data-sound]');if(sound){playSound(sound.dataset.sound).catch(()=>toast(t('audioError')));return;}
-  const key=event.target.closest('[data-midi]');if(key){playKey(Number(key.dataset.midi)).catch(()=>toast(t('audioError')));return;}
+  const key=event.target.closest('[data-midi]');if(key){if(!pianoInput.shouldHandleClick(event))return;playKey(Number(key.dataset.midi)).catch(()=>toast(t('audioError')));return;}
   if(event.target.closest('#complete-lesson')){completeLesson();return;}
   if(event.target.closest('#metro-toggle')){if(metroRunning)stopMetronome();else startMetronome().catch(()=>toast(t('metroError')));return;}
   if(event.target.closest('#rhythm-demo')){ensureAudio().then(ctx=>{if(!ctx)return;for(let i=0;i<4;i++)clickTone(ctx.currentTime+.05+i,i===0);}).catch(()=>toast('Chưa mở được âm thanh. Hãy thử lại.'));}
@@ -480,6 +504,7 @@ document.addEventListener('change',event=>{
 });
 document.addEventListener('keydown',event=>{
   const modalOpen=!$('#lesson-modal').hidden;
+  if(event.key==='Escape'&&!modalOpen&&$('#mobile-menu-toggle').getAttribute('aria-expanded')==='true'){setLearningMenu(false,true);return;}
   if(event.key==='Escape'&&modalOpen){closeLesson();return;}
   if(event.key==='Tab'&&modalOpen){const controls=$$('button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex=\"0\"]',$('.lesson-dialog')).filter(el=>el.getClientRects().length);const first=controls[0],last=controls.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===$('.lesson-dialog'))){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}return;}
   if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;
