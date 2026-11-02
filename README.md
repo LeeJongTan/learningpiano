@@ -58,3 +58,13 @@ node --test tests/lesson-flow.test.cjs
 Nội dung và ví dụ được viết riêng cho website; có đối chiếu các khái niệm nền tảng với [ABRSM](https://www.abrsm.org/sites/default/files/2023-09/music-theory-syllabus-outline-grades-1-5-from-2020.pdf), [Steps to Music Theory](https://odp.library.tamu.edu/stepstomusictheory/chapter/compound-meters/) và [MuseScore Handbook](https://handbook.musescore.org/notation/repeats/repeat-signs). Khóa này không phải chương trình chứng chỉ ABRSM.
 
 Bản ban đầu nhập từ Sites version 6; bản GitHub và bản Sites được quản lý riêng, không tự đồng bộ.
+
+## Mobile navigation and multi-touch update
+
+On phones, the Learning space button opens a vertical menu with readable labels and its own scroll area. The header stays visible while scrolling; desktop navigation also scrolls on short screens. Safari text autosizing is normalized without disabling page zoom.
+
+`piano-input.js` handles each pointer independently, including non-primary fingers, on pointerdown. A legacy Touch Events fallback handles changedTouches. Pointer release/cancel, capture loss, page blur and navigation clear held-key highlights. Compatibility clicks are ignored while keyboard and assistive button activation remain available. Only the keys suppress browser touch gestures; the labeled rail above them scrolls the keyboard horizontally. Voices remain independent and the AudioContext resumes after interruption.
+
+The Practice room includes the requested iPhone/iPad ringer reminder. The homepage hero contains the owner-supplied English quotation, Vietnamese translation and Beethoven credit.
+
+Run all checks with `node --test tests/*.test.cjs` (23 test groups). Browser QA covers desktop, 390×844 and 320×360 layouts, menu navigation/scrolling, sound-note UI feedback, and a clean keyboard assessment without duplicate note input. Multi-finger event handling and interrupted audio recovery are tested in Node; physical iPhone/Safari multi-touch and actual audio output still require device testing.

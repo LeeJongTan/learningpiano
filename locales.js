@@ -405,3 +405,9 @@ Object.assign(window.PHIM_TEXT, {
     "Bar {n}"
   ]
 });
+
+Object.assign(window.PHIM_TEXT, {
+ ringerTip:['Trên iPhone/iPad (Safari), hãy bật chuông/ringtone (tắt chế độ im lặng), tăng âm lượng media rồi chạm phím để nghe tiếng đàn.','On iPhone/iPad (Safari), turn on the ringer (turn off Silent Mode), raise media volume, then tap a key to hear the piano.'],
+ keyboardPan:['Vuốt dải này để cuộn ngang bàn phím ↔','Swipe this rail to scroll the keyboard ↔'],
+ keyboardScroll:['Chạm nhiều phím cùng lúc để chơi hợp âm. Vuốt dải phía trên phím để cuộn ngang.','Touch several keys at once to play a chord. Swipe the rail above the keys to scroll sideways.']
+});
