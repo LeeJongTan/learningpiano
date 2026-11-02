@@ -52,11 +52,10 @@ function lessonCards(wide = false, list = lessonData.slice(0,3)) {
   return `<div class="lesson-grid ${wide ? 'wide-lessons' : ''}">${list.map(l => `<article class="lesson-card"><div class="lesson-art art-${l.color}"><span class="art-number">${pad(l.id)}</span>${lessonArt(l.id)}</div>${state.completed.includes(l.id) ? `<span class="done-badge" aria-label="${t('completed')}">${icon('check')}</span>` : ''}<div class="lesson-body"><div class="lesson-meta">${l.category} · ${t('lesson')} ${pad(l.id)}</div><h3><a href="#lesson-${l.id}" data-lesson="${l.id}">${l.title}</a></h3><p>${l.description}</p><div class="lesson-card-footer"><span class="lesson-duration">${icon('clock')}${l.duration}</span><button class="card-action" data-lesson="${l.id}" aria-label="${t('openLesson',{title:l.title})}">${icon(state.completed.includes(l.id) ? 'check' : 'arrow')}</button></div></div></article>`).join('')}</div>`;
 }
 function nextLesson() { return lessonData.find(l => !state.completed.includes(l.id))?.id || 1; }
-function heroArt() { return `<div class="hero-art hero-art-photo"><img class="hero-image" src="./assets/piano-wave.png" width="236" height="337" alt="${t('heroImageAlt')}" fetchpriority="high" decoding="async"></div>`; }
 function homePage() {
   const n = state.completed.length, pct = Math.round(n / 12 * 100);
   return `<div class="page-heading"><div><h1>${t('welcome')}</h1><p>${t('welcomeSub')}</p></div></div>
-  <section class="hero"><div class="hero-copy"><div class="eyebrow"><span class="line"></span> ${t('heroEyebrow')}</div><h2>${t('heroTitle')}<br><span>${t('heroTitle2')}</span></h2><p>${t('heroDescription')}</p><div class="hero-actions"><button class="button" data-lesson="${nextLesson()}">${t(n===0?'start':n===12?'review':'continue')} ${icon('arrow')}</button></div></div>${heroArt()}</section>
+  <section class="hero hero-copy-only"><div class="hero-copy"><div class="eyebrow"><span class="line"></span> ${t('heroEyebrow')}</div><h2>${t('heroTitle')}<br><span>${t('heroTitle2')}</span></h2><p>${t('heroDescription')}</p><div class="hero-actions"><button class="button" data-lesson="${nextLesson()}">${t(n===0?'start':n===12?'review':'continue')} ${icon('arrow')}</button></div></div></section>
   <div class="overview-grid"><div><section aria-labelledby="first-lessons"><div class="section-heading"><div><h2 id="first-lessons">${t('firstSteps')}</h2><p>${t('firstSub')}</p></div><a class="section-link" href="#learn">${t('viewPath')} ${icon('arrow')}</a></div>${lessonCards()}</section><a class="practice-teaser" href="#practice"><span class="teaser-icon">${icon('piano')}</span><div class="teaser-copy"><h3>${t('teaserTitle')}</h3><p>${t('teaserSub')}</p></div><span class="small-pill">${t('freePractice')}</span>${icon('arrow')}</a></div>
   <aside class="side-stack"><section class="progress-card"><div class="widget-label">${t('stepByStep')}</div><div class="progress-title"><h3>${t('seed')}</h3><span>${pct}%</span></div><div class="progress-track" role="progressbar" aria-label="${t('progressLabel')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div><div class="progress-detail"><span>${t('lessonsCompleted',{n})}</span><span>${t('intro')}</span></div><div class="progress-sub"><div><strong>${n}<small> / 12</small></strong><span>${t('understood')}</span></div><div><strong>${Math.floor(state.practiceSeconds / 60)}<small> ${t('minutes')}</small></strong><span>${t('timePractising')}</span></div></div></section><section class="thought-card"><div class="thought-header">${icon('spark')} ${t('curious')}</div><blockquote>${t('octaveQuestion')}</blockquote><a href="#library" class="section-link">${t('discoverOctave')} ${icon('arrow')}</a></section></aside></div>`;
 }
@@ -132,7 +131,7 @@ function renderShell() {
   document.documentElement.lang=state.language;
   const content={'.brand-caption':'tagline','.nav-label':'space','.sidebar-note p':'sideStory','.sidebar-note>span:last-child':'curiosityStart','.sidebar-bottom strong':'newcomer','.sidebar-bottom div>span':'beginning','.footer .muted':'footer','.skip-link':'skip'};
   for(const [selector,key] of Object.entries(content))$(selector).innerHTML=t(key);
-  $('.brand').setAttribute('aria-label',t('brandHome'));$('.main-nav').setAttribute('aria-label',t('nav'));$('.close-modal').setAttribute('aria-label',t('close'));
+  $$('.brand,.header-logo').forEach(el=>el.setAttribute('aria-label',t('brandHome')));$('.main-nav').setAttribute('aria-label',t('nav'));$('.close-modal').setAttribute('aria-label',t('close'));
   $$('.nav-link').forEach(a=>$('span',a).textContent=t(a.dataset.route));
   $$('[data-copy]').forEach(el=>el.textContent=t(el.dataset.copy));
   $$('.footer>span')[1].innerHTML=`${t('madeWith')} <span class="orange">✦</span>`;
@@ -394,4 +393,5 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMetron
 window.addEventListener('pagehide',save);
 setInterval(()=>{if(!document.hidden&&route==='practice'&&$('#lesson-modal').hidden){state.practiceSeconds+=5;save();}},5000);
 render();
+
 

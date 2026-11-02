@@ -30,7 +30,7 @@ Sau khi merge pull request, mở repository Settings → Pages. Chọn Deploy fr
 - `app.js`: tương tác, âm thanh, hình khuông nhạc và tiến độ.
 - `curriculum.js`: nội dung bài học song ngữ và bài nhạc.
 - `locales.js`: bản dịch giao diện và từ điển.
-- `favicon.svg`: biểu tượng trang.
+- `assets/piano-logo.png`: logo piano do chủ website cung cấp, dùng trên thanh bên, đầu trang và biểu tượng tab.
 
 Tiến độ, sao, ngôn ngữ và cài đặt bàn phím được lưu trong localStorage của trình duyệt (`phim-piano-v1`); chưa có tài khoản hoặc đồng bộ giữa các thiết bị. Tiến độ trên tên miền cloud không tự chuyển sang tên miền GitHub Pages.
 
@@ -54,7 +54,7 @@ không tự hoàn thành bài. Người học có thể trả lời lại không
 đáp án không dùng thêm lượt. Bản nháp và số lượt được giữ khi đổi ngôn ngữ trong
 bài đang mở, và được đặt lại khi mở lại bài. Không gửi câu trả lời tới máy chủ.
 
-Ảnh chủ website cung cấp nằm ở `assets/piano-wave.png`. Bảng màu: `#FFA883`,
+Logo chủ website cung cấp nằm ở `assets/piano-logo.png`; ảnh lớn đã được gỡ khỏi phần giới thiệu. Bảng màu: `#FFA883`,
 `#FDE3C8`, `#FAF2E8`, `#6FC7E1`; chữ dùng sắc đậm để giữ độ tương phản.
 
 Chạy kiểm tra bộ chấm bằng Node.js:
@@ -62,3 +62,4 @@ Chạy kiểm tra bộ chấm bằng Node.js:
 ```sh
 node --test tests/short-answers.test.cjs
 ```
+
