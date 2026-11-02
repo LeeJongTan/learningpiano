@@ -80,20 +80,24 @@ Object.assign(window.PHIM_TEXT, {
  quickHelp:['Nếu chưa nghe thấy âm thanh','If you cannot hear sound'],quickHelpText:['Chạm trực tiếp một phím đàn để trình duyệt cho phép phát âm thanh. Kiểm tra âm lượng của thiết bị và thanh âm lượng trong Phòng tập.','Tap a piano key to let your browser enable audio. Check your device volume and the volume slider in the Practice room.']
 });
 
-// Short-answer lesson interface. Available in either interface language.
+// Sequential multiple-choice lessons.
 Object.assign(window.PHIM_TEXT, {
- answerLabel:['Câu trả lời của bạn','Your answer'],
- answerInstructions:['Viết ngắn gọn bằng lời của bạn, đủ các ý trong câu hỏi. Có thể dùng tiếng Việt hoặc tiếng Anh, có dấu hoặc không dấu.','Write a short answer in your own words and include each part of the question. Vietnamese or English, with or without accents, is accepted.'],
- answerPolicy:['Sai lần 1: động viên · lần 2: gợi ý · lần 3: đáp án mẫu. Chấm theo từ khóa và ý chính, chưa đánh giá mọi cách diễn đạt.','1st miss: encouragement · 2nd: a hint · 3rd: a model answer. Checks use keywords and key ideas, so not every wording can be recognised.'],
- answerSubmit:['Kiểm tra câu trả lời','Check my answer'],answerPassed:['Đã trả lời đúng','Answer accepted'],
- answerAttempts:['Lần thử chưa đạt: {n}/3','Unsuccessful attempts: {n}/3'],
- answerEmpty:['Bạn hãy viết câu trả lời trước nhé. Ô trống không tính là một lần sai.','Write your answer first. An empty answer does not count as a miss.'],
- answerDuplicate:['Bạn đã thử câu này rồi. Hãy bổ sung hoặc đổi cách giải thích; gửi lại nguyên câu không tính thêm lần sai.','You have tried this answer already. Add an idea or rephrase it; submitting the same answer does not count as another miss.'],
- answerEncourage:['Chưa đủ ý hoặc còn ý mâu thuẫn, nhưng không sao — bạn đang luyện suy luận! Đọc lại câu hỏi và thử diễn đạt rõ hơn nhé.','Some key ideas are missing or conflicting, and that is okay — this is practice! Read the question again and try making your answer clearer.'],
- answerHintIntro:['Bạn đã cố gắng hai lần rồi. Thử dùng gợi ý này để nối các ý lại nhé.','You have given it two tries. Use this hint to connect the ideas.'],
- answerRevealIntro:['Cùng xem một cách trả lời nhé. Hiểu vì sao rồi thử viết lại bằng lời của bạn.','Let’s look at one way to answer. Understand why, then try writing it in your own words.'],
- answerHintTitle:['Gợi ý','Hint'],answerModelTitle:['Đáp án mẫu','Model answer'],
- answerRetryAfterReveal:['Xem đáp án chưa tính là trả lời đúng. Bạn vẫn có thể nhập lại; không bị giới hạn số lần luyện.','Viewing the model does not count as a correct answer. You can keep trying with no attempt limit.'],
- answerCorrect:['Đúng ý rồi! Bạn đã diễn đạt được kiến thức quan trọng.','You have the key ideas! You have explained the important knowledge.']
+ flowRead:['Đọc hiểu','Read'],flowQuiz:['Kiểm tra','Quiz'],flowPractice:['Thực hành','Practise'],
+ lessonSteps:['Các bước của bài học','Lesson steps'],lessonProgress:['Tiến độ bài đang học','Current lesson progress'],
+ lockedUntil:['Hoàn thành bài {n} để mở khóa','Complete lesson {n} to unlock'],
+ reviewTitle:['Cùng ôn lại một chút nhé.','Let’s review for a moment.'],
+ reviewMessage:['Bạn vừa sai lần thứ 4 trong lượt kiểm tra. Đọc lại kiến thức bên dưới, rồi bắt đầu lại 6 câu với bộ đếm sai mới. Bài chưa được đánh dấu hoàn thành.','That was your fourth mistake in this quiz run. Review the reading below, then restart all 6 questions with a fresh mistake count. This lesson has not been marked complete.'],
+ quizQuestion:['Câu {n} / {total}','Question {n} / {total}'],quizMistakes:['Số lần sai: {n} / 3','Mistakes: {n} / 3'],
+ quizSelect:['Chọn một đáp án, rồi nhấn Kiểm tra.','Choose one answer, then press Check.'],
+ quizCorrect:['Chính xác!','Correct!'],quizWrong:['Chưa đúng, thử suy nghĩ lại nhé.','Not quite. Give it another thought.'],
+ quizWrongHelp:['Còn {n} lần sai nữa thì bạn sẽ quay lại đọc hiểu. Nhấn Thử lại để chọn đáp án khác.','After {n} more mistake(s), you will return to the reading. Press Try again to choose another answer.'],
+ quizPolicy:['Mỗi lượt được sai tối đa 3 lần. Sai lần thứ 4 sẽ quay lại đọc hiểu và làm lại lượt kiểm tra.','Up to 3 mistakes per run. A fourth mistake returns you to the reading before restarting the quiz.'],
+ readBeforeQuiz:['Đọc và xem ví dụ, sau đó làm {n} câu kiểm tra.','Read the explanation and examples, then try {n} questions.'],
+ beginQuiz:['Xong, bắt đầu kiểm tra','Done, start the quiz'],restartQuiz:['Đã ôn xong, kiểm tra lại','Reviewed, restart quiz'],
+ quizFooter:['Trả lời đúng từng câu để đi tiếp.','Answer each question correctly to continue.'],
+ checkChoice:['Kiểm tra','Check'],retryQuestion:['Thử lại câu này','Try this question again'],quizNext:['Tiếp tục','Continue'],quizToPractice:['Tiếp tục thực hành','Continue to practice'],
+ practiceAfterQuiz:['Đã qua 6 câu! Giờ thử trên đàn.','Six questions done! Try the keyboard.'],
+ practiceFinishHint:['Chơi đúng chuỗi nốt để hoàn thành và mở bài tiếp theo.','Play the note sequence correctly to finish and unlock the next lesson.'],
+ finishHint:['Hoàn thành kiểm tra và thực hành để mở bài tiếp theo.','Complete the quiz and practice to unlock the next lesson.'],
+ courseLimit:['Khóa nhập môn giúp bạn đọc hiểu và luyện thứ tự nốt; chưa đánh giá kỹ thuật ngón hoặc nhịp biểu diễn. Học theo thứ tự để mở khóa từng bài.','This introductory course teaches reading and note order; it does not assess finger technique or performance timing. Complete lessons in order to unlock the path.']
 });
-
