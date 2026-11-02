@@ -82,7 +82,6 @@ Object.assign(window.PHIM_TEXT, {
 
 // Short-answer lesson interface. Available in either interface language.
 Object.assign(window.PHIM_TEXT, {
- heroImageAlt:['Bàn phím piano đen trắng uốn lượn như một dải ruy băng.','A black-and-white piano keyboard curving like a ribbon.'],
  answerLabel:['Câu trả lời của bạn','Your answer'],
  answerInstructions:['Viết ngắn gọn bằng lời của bạn, đủ các ý trong câu hỏi. Có thể dùng tiếng Việt hoặc tiếng Anh, có dấu hoặc không dấu.','Write a short answer in your own words and include each part of the question. Vietnamese or English, with or without accents, is accepted.'],
  answerPolicy:['Sai lần 1: động viên · lần 2: gợi ý · lần 3: đáp án mẫu. Chấm theo từ khóa và ý chính, chưa đánh giá mọi cách diễn đạt.','1st miss: encouragement · 2nd: a hint · 3rd: a model answer. Checks use keywords and key ideas, so not every wording can be recognised.'],
@@ -97,3 +96,4 @@ Object.assign(window.PHIM_TEXT, {
  answerRetryAfterReveal:['Xem đáp án chưa tính là trả lời đúng. Bạn vẫn có thể nhập lại; không bị giới hạn số lần luyện.','Viewing the model does not count as a correct answer. You can keep trying with no attempt limit.'],
  answerCorrect:['Đúng ý rồi! Bạn đã diễn đạt được kiến thức quan trọng.','You have the key ideas! You have explained the important knowledge.']
 });
+
