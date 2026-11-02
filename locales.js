@@ -101,3 +101,307 @@ Object.assign(window.PHIM_TEXT, {
  finishHint:['Hoàn thành kiểm tra và thực hành để mở bài tiếp theo.','Complete the quiz and practice to unlock the next lesson.'],
  courseLimit:['Khóa nhập môn giúp bạn đọc hiểu và luyện thứ tự nốt; chưa đánh giá kỹ thuật ngón hoặc nhịp biểu diễn. Học theo thứ tự để mở khóa từng bài.','This introductory course teaches reading and note order; it does not assess finger technique or performance timing. Complete lessons in order to unlock the path.']
 });
+
+// Expanded reading course and browser-local learner progress.
+Object.assign(window.PHIM_TEXT, {
+  "sideStory": [
+    "20 bài học<br>để hiểu và đọc nhạc.",
+    "20 lessons<br>to understand and read music."
+  ],
+  "madeWith": [
+    "Piano cơ bản · 20 bài học",
+    "Piano basics · 20 lessons"
+  ],
+  "lessonsCompleted": [
+    "{n}/20 bài đã hoàn thành",
+    "{n}/20 lessons completed"
+  ],
+  "learnTitle": [
+    "20 bài: từ phím đàn đến đọc sheet.",
+    "20 lessons: from keys to reading scores."
+  ],
+  "learnSub": [
+    "Mỗi bài gồm các bước đọc ngắn, ví dụ nghe nhìn, 6 câu trắc nghiệm, luyện đàn và một lượt kiểm tra chuỗi nốt. Hoàn thành từng bài để mở bài kế tiếp.",
+    "Each lesson includes short reading steps, visual and audio examples, 6 quiz questions, guided practice and a note-sequence test. Complete each lesson to unlock the next."
+  ],
+  "courseSummary": [
+    "20 bài tương tác · 120 câu hỏi · {n}/20 bài hoàn thành",
+    "20 interactive lessons · 120 questions · {n}/20 completed"
+  ],
+  "lessonBadge": [
+    "Đã hoàn thành {n}/20 bài học",
+    "Completed {n}/20 lessons"
+  ],
+  "extendedRhythmStage": [
+    "06 · Đọc nhịp sâu hơn",
+    "06 · Reading rhythm further"
+  ],
+  "scoreSignsStage": [
+    "07 · Hóa biểu và ký hiệu trên sheet",
+    "07 · Key signatures and score markings"
+  ],
+  "sheetApplicationStage": [
+    "08 · Ghép kiến thức để đọc sheet",
+    "08 · Putting score reading together"
+  ],
+  "outcome2": [
+    "Đọc trường độ, dấu nối, nhịp 3/4–4/4–6/8, hóa biểu G/F trưởng và ký hiệu thường gặp.",
+    "Read note values, ties, 3/4–4/4–6/8, G/F major key signatures and common score markings."
+  ],
+  "outcome3": [
+    "Xây hợp âm ba, hiểu thế đảo và áp dụng cách đọc vào một đoạn nhạc ngắn.",
+    "Build triads, understand inversions and apply reading skills to a short score."
+  ],
+  "beginning": [
+    "Tiến độ lưu trong trình duyệt",
+    "Progress saved in this browser"
+  ],
+  "profile": [
+    "Tiến độ của tôi",
+    "My progress"
+  ],
+  "welcomeNamed": [
+    "Chào {name}, cùng chơi nhạc nhé.",
+    "Hello {name}, let’s make music."
+  ],
+  "profileTitle": [
+    "Hành trình của riêng bạn.",
+    "Your own learning journey."
+  ],
+  "profileIntro": [
+    "Giữ lại bài đang học và thành quả của bạn trong trình duyệt này.",
+    "Keep your current lesson and achievements in this browser."
+  ],
+  "learnerName": [
+    "Tên hiển thị",
+    "Display name"
+  ],
+  "optionalName": [
+    "Tên hoặc biệt danh (không bắt buộc)",
+    "Name or nickname (optional)"
+  ],
+  "namePlaceholder": [
+    "Bạn muốn được gọi là gì?",
+    "What would you like to be called?"
+  ],
+  "saveProfile": [
+    "Lưu tên",
+    "Save name"
+  ],
+  "profileSaved": [
+    "Đã lưu tên trong trình duyệt này.",
+    "Name saved in this browser."
+  ],
+  "profileLessons": [
+    "Bài đã hoàn thành",
+    "Lessons completed"
+  ],
+  "profilePrivacy": [
+    "Tên này không tạo tài khoản. Không cần mật khẩu; dữ liệu học được giữ tại trình duyệt này, không gửi lên GitHub. Người dùng chung trình duyệt có thể xem tiến độ.",
+    "This name does not create an account. No password is needed; learning data stays in this browser and is not sent to GitHub. People sharing this browser can view the progress."
+  ],
+  "backupTitle": [
+    "Sao lưu và chuyển tiến độ",
+    "Back up and transfer progress"
+  ],
+  "backupHelp": [
+    "Tải bản sao xuống máy. Muốn chuyển sang trình duyệt hoặc thiết bị khác, mở website ở đó và chọn lại file sao lưu. Đây là chuyển thủ công, chưa tự đồng bộ.",
+    "Download a backup. To move to another browser or device, open the site there and select the backup file. This is a manual transfer, not automatic sync."
+  ],
+  "exportProgress": [
+    "Tải file sao lưu",
+    "Download backup"
+  ],
+  "importProgress": [
+    "Chọn file tiến độ (.json)",
+    "Choose a progress file (.json)"
+  ],
+  "importPreview": [
+    "Kiểm tra trước khi khôi phục",
+    "Review before restoring"
+  ],
+  "importSummary": [
+    "Người học: {name} · Đã hoàn thành {n}/20 bài.",
+    "Learner: {name} · {n}/20 lessons completed."
+  ],
+  "importReplaces": [
+    "Khôi phục sẽ thay tiến độ trong trình duyệt này bằng bản sao đã chọn.",
+    "Restoring will replace this browser’s progress with the selected backup."
+  ],
+  "confirmImport": [
+    "Khôi phục bản này",
+    "Restore this backup"
+  ],
+  "cancelImport": [
+    "Hủy",
+    "Cancel"
+  ],
+  "backupWarning": [
+    "Xóa dữ liệu website hoặc dùng chế độ riêng tư có thể làm mất tiến độ. File sao lưu có tên hiển thị và tiến độ; chỉ chia sẻ khi bạn muốn.",
+    "Clearing site data or using private browsing may erase progress. The backup includes your display name and progress; share it only if you wish."
+  ],
+  "importError": [
+    "File không hợp lệ. Hãy dùng file sao lưu .json tải từ website này, tối đa 256 KB.",
+    "Invalid file. Use a .json backup downloaded from this website, up to 256 KB."
+  ],
+  "importDone": [
+    "Đã khôi phục tiến độ.",
+    "Progress restored."
+  ],
+  "exportDone": [
+    "Đã tạo file sao lưu để tải xuống.",
+    "Backup prepared for download."
+  ],
+  "sessionSaved": [
+    "Đã lưu trong trình duyệt",
+    "Saved in this browser"
+  ],
+  "resumeAt": [
+    "Đang học bài {n} · {detail}",
+    "In progress: lesson {n} · {detail}"
+  ],
+  "readingStep": [
+    "Bước đọc {n} / {total}",
+    "Reading step {n} / {total}"
+  ],
+  "readingSteps": [
+    "Các bước đọc hiểu",
+    "Reading steps"
+  ],
+  "remember": [
+    "GHI NHỚ ĐỂ ÁP DỤNG",
+    "REMEMBER AND APPLY"
+  ],
+  "listenThisStep": [
+    "Nghe ví dụ bước này",
+    "Hear this step’s example"
+  ],
+  "previousStep": [
+    "Quay lại",
+    "Back"
+  ],
+  "nextReading": [
+    "Xong, bước tiếp theo",
+    "Done, next step"
+  ],
+  "needsReview": [
+    "Cần ôn",
+    "Review"
+  ],
+  "reviewFocus": [
+    "Chỗ cần chú ý từ các câu đã sai",
+    "Focus from the questions you missed"
+  ],
+  "reviewTopic": [
+    "Gợi ý: nhớ lại bước “{topic}”.",
+    "Hint: recall the step “{topic}”."
+  ],
+  "reviewTitle": [
+    "Cùng làm rõ chỗ còn nhầm nhé.",
+    "Let’s clear up the confusion."
+  ],
+  "targetedReview": [
+    "Bạn vừa sai lần thứ 4. Các bước cần ôn được đánh dấu bên trên; phần giải thích dưới đây liên hệ với câu đã sai. Sau khi ôn, bắt đầu lượt mới với vị trí đáp án mới.",
+    "That was the fourth mistake. The steps to review are marked above; the explanations below connect to missed questions. After reviewing, start a new run with new answer positions."
+  ],
+  "quizPolicy": [
+    "Sai tối đa 3 lần mỗi lượt. Lần thứ 4 đưa bạn về đúng bước đọc cần ôn; bài chưa hoàn thành. Lượt mới đổi vị trí đáp án.",
+    "Up to 3 mistakes per run. A fourth returns you to a relevant reading step; the lesson is not complete. A new run changes answer positions."
+  ],
+  "quizWrongHelp": [
+    "Còn {n} lần sai nữa thì quay lại ôn. Chậm lại một chút, nhớ quy tắc rồi chọn lại nhé.",
+    "After {n} more mistake(s), you will review. Slow down, recall the rule and try again."
+  ],
+  "practiceAfterQuiz": [
+    "Đã qua 6 câu! Cùng luyện nốt.",
+    "Six questions done! Practise the notes."
+  ],
+  "guidedPractice": [
+    "LUYỆN CÓ GỢI Ý",
+    "GUIDED PRACTICE"
+  ],
+  "keyboardTest": [
+    "KIỂM TRA CHUỖI NỐT",
+    "NOTE-SEQUENCE TEST"
+  ],
+  "testHeading": [
+    "Chơi đúng trọn một lượt.",
+    "Play one complete, correct run."
+  ],
+  "trainingRule": [
+    "Bạn được thử và nhận gợi ý khi sai. Hoàn thành chuỗi luyện để mở lượt kiểm tra; luyện xong chưa được tính hoàn thành bài.",
+    "Explore and use hints after mistakes. Finish the practice sequence to unlock the test; practice alone does not complete the lesson."
+  ],
+  "testRule": [
+    "Chơi đúng toàn bộ chuỗi trong một lượt, không giới hạn tốc độ. Một nốt sai sẽ dừng lượt; nhấn thử lại để bắt đầu từ đầu. Sai 3 lượt liên tiếp sẽ quay lại luyện có gợi ý. Nếu đóng bài hoặc tải lại, lượt đàn đang chơi bắt đầu lại từ nốt đầu.",
+    "Play the entire sequence correctly in one run, with no speed limit. One wrong note stops the run; press retry to restart from the beginning. Three failed runs return you to guided practice. Closing or reloading restarts an unfinished keyboard test from its first note."
+  ],
+  "practiceFinishHint": [
+    "Chỉ một lượt kiểm tra đúng toàn bộ chuỗi mới mở nút hoàn thành.",
+    "Only a completely correct test run enables completion."
+  ],
+  "trainingFinishHint": [
+    "Luyện trước, rồi kiểm tra riêng để hoàn thành bài.",
+    "Practise first, then take a separate test to complete the lesson."
+  ],
+  "testRetryHint": [
+    "Lượt vừa rồi đã dừng. Hãy bắt đầu lại từ nốt đầu.",
+    "That run has stopped. Restart from the first note."
+  ],
+  "startKeyboardTest": [
+    "Bắt đầu kiểm tra đàn",
+    "Start keyboard test"
+  ],
+  "retryKeyboardTest": [
+    "Thử lại từ đầu",
+    "Retry from the beginning"
+  ],
+  "trainingDone": [
+    "Luyện xong! Nhấn Bắt đầu kiểm tra đàn để thử một lượt đúng hoàn toàn.",
+    "Practice complete! Start the keyboard test for one fully correct run."
+  ],
+  "testFailed": [
+    "Bạn vừa chơi {note}; lượt đã dừng. Số lượt sai: {n}/3. Nhấn thử lại, không cần vội.",
+    "You played {note}; this run has stopped. Failed runs: {n}/3. Press retry and take your time."
+  ],
+  "backToTraining": [
+    "Sau 3 lượt chưa đạt, mình quay lại luyện có gợi ý nhé. Chơi lại chuỗi rồi thử kiểm tra mới.",
+    "After 3 unsuccessful runs, return to guided practice. Practise the sequence, then try a new test."
+  ],
+  "testPassed": [
+    "Đúng cả chuỗi trong một lượt! Bạn có thể hoàn thành bài.",
+    "The whole sequence was correct in one run! You can complete the lesson."
+  ],
+  "bassClef": [
+    "khóa Fa",
+    "bass clef"
+  ],
+  "trebleClef": [
+    "khóa Sol",
+    "treble clef"
+  ],
+  "scoreDescription": [
+    "Ví dụ {clef}. Các nốt từ trái sang phải: {notes}.",
+    "Example in {clef}. Notes from left to right: {notes}."
+  ],
+  "tieExample": [
+    "Hai nốt đen C4 nối: giữ 2 phách, chỉ đánh 1 lần.",
+    "Two tied C4 quarters: hold for 2 beats, attack once."
+  ],
+  "repeatExample": [
+    "Chơi đoạn này hai lần tổng cộng.",
+    "Play this section twice in total."
+  ],
+  "passOne": [
+    "Lượt 1 · đoạn chung + kết 1",
+    "Pass 1 · common section + ending 1"
+  ],
+  "passTwo": [
+    "Lượt 2 · đoạn chung + kết 2",
+    "Pass 2 · common section + ending 2"
+  ],
+  "barNumber": [
+    "Ô nhịp {n}",
+    "Bar {n}"
+  ]
+});

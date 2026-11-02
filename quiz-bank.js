@@ -1,6 +1,6 @@
 'use strict';
-// Each authored question starts with its correct option. Rotate options below so
-// answer positions vary and remain stable when the interface language changes.
+// Authored correct options remain paired across languages. Each new quiz run
+// shuffles their indices; a saved run retains the same order on resume.
 (function(root) {
   const Q=(vi,en,optionsVi,optionsEn,whyVi,whyEn)=>({question:[vi,en],options:[optionsVi,optionsEn],explanation:[whyVi,whyEn],correct:0});
   const bank={
@@ -101,11 +101,9 @@
       Q('Trong vòng đệm minh họa, B3–D4–G4 thuộc hợp âm nào?','In the example accompaniment, which chord contains B3–D4–G4?',['G trưởng','C trưởng','F trưởng','B thứ'],['G major','C major','F major','B minor'],'Sắp lại G–B–D cho thấy đây là G trưởng, với B ở thấp nhất.','Reordering as G–B–D identifies G major, with B in the bass.')
     ]
   };
+  const steps={"1": [0, 0, 1, 1, 1, 1], "2": [0, 1, 1, 1, 1, 0], "3": [0, 0, 1, 1, 1, 0], "4": [0, 0, 0, 1, 1, 1], "5": [0, 0, 0, 1, 1, 1], "6": [0, 0, 1, 1, 1, 0], "7": [0, 0, 0, 1, 1, 1], "8": [0, 0, 1, 0, 2, 1], "9": [1, 1, 1, 0, 0, 1], "10": [0, 0, 1, 1, 1, 1], "11": [0, 0, 0, 0, 1, 1], "12": [0, 0, 0, 0, 1, 1]};
   for(const [id,questions] of Object.entries(bank)) questions.forEach((q,i)=>{
-    const shift=(Number(id)+i)%4;
-    q.options=q.options.map(options=>options.slice(shift).concat(options.slice(0,shift)));
-    q.correct=(4-shift)%4;
-    q.id=Number(id)+'-'+(i+1);
+    q.id=Number(id)+'-'+(i+1);q.step=steps[id][i];
   });
   if(typeof module!=='undefined'&&module.exports)module.exports=bank;
   if(root)root.PHIM_QUIZZES=bank;

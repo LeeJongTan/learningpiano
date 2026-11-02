@@ -3,26 +3,17 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const STORAGE_KEY = 'phim-piano-v1';
-let state = { curriculumVersion: 2, completed: [], songCompleted: [], practiceSeconds: 0, language: 'vi', keyboardStart: 3, keyboardOctaves: 3, showLabels: true };
-function t(key, values = {}) {
-  const pair = window.PHIM_TEXT[key];
-  if (!pair) throw new Error('Missing translation: ' + key);
-  return pair[state.language === 'en' ? 1 : 0].replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '').replaceAll('(s)',Number(values.n)===1?'':'s');
+const COURSE_TOTAL=window.PHIM_COURSE.length;
+const FLOW=window.PHIM_LESSON_FLOW,LEARNER=window.PHIM_LEARNER;
+let state=LEARNER.defaults(),storageOK=true;
+function t(key,values={}){
+  const pair=window.PHIM_TEXT[key];if(!pair)throw new Error('Missing translation: '+key);
+  return pair[state.language==='en'?1:0].replace(/\{(\w+)\}/g,(_,name)=>values[name]??'').replaceAll('(s)',Number(values.n)===1?'':'s');
 }
-try {
-  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-  if (saved && typeof saved === 'object') {
-    state.completed = Array.isArray(saved.completed) ? [...new Set(saved.completed.filter(n => Number.isInteger(n) && n >= 1 && n <= 12).map(n => saved.curriculumVersion === 2 ? n : ({1:1,2:7,3:11}[n])).filter(Boolean))] : [];
-    state.songCompleted = Array.isArray(saved.songCompleted) ? [...new Set(saved.songCompleted.filter(n => [0,1,2,3].includes(n)))] : [];
-    state.practiceSeconds = Number.isFinite(saved.practiceSeconds) ? Math.max(0, saved.practiceSeconds) : 0;
-    state.language = saved.language === 'en' ? 'en' : 'vi';
-    state.keyboardOctaves = [1,2,3].includes(saved.keyboardOctaves) ? (saved.curriculumVersion === 2 ? saved.keyboardOctaves : 3) : 3;
-    state.keyboardStart = Number.isInteger(saved.keyboardStart) ? Math.max(1, Math.min(8-state.keyboardOctaves, saved.keyboardStart)) : 3;
-    state.showLabels = saved.showLabels !== false;
-  }
-} catch {}
-let storageOK = true;
-function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { storageOK = false; } }
+try{const saved=localStorage.getItem(STORAGE_KEY);if(saved)state=LEARNER.sanitise(JSON.parse(saved),window.PHIM_COURSE,window.PHIM_QUIZZES,window.PHIM_READINGS,FLOW);}catch(error){if(error.name!=='SyntaxError')storageOK=false;}
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));storageOK=true;}catch{storageOK=false;}updateSaveStatus();}
+const escapeHTML=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function updateSaveStatus(){$$('[data-save-status]').forEach(el=>el.textContent=t(storageOK?'sessionSaved':'storageBlocked'));}
 const L = value => Array.isArray(value) ? value[state.language === 'en' ? 1 : 0] : value;
 const pad = n => String(n).padStart(2,'0');
 const termsVI = [
@@ -39,7 +30,7 @@ let lessonData, terms, routeTitles;
 function refreshLocale() {
   lessonData = window.PHIM_COURSE.map(l => ({...l,...Object.fromEntries(['title','category','description','goals','theory','concept','question','reason','task'].map(k=>[k,L(l[k])])),duration:l.duration+' '+t('minutes'),color:['mint','sand','lilac'][(l.id-1)%3]}));
   terms = state.language === 'en' ? window.PHIM_TERMS_EN : termsVI;
-  routeTitles = Object.fromEntries(['home','learn','practice','song','library','feedback'].map(key => [key,t(key)]));
+  routeTitles = Object.fromEntries(['home','learn','practice','song','library','feedback','profile'].map(key => [key,t(key)]));
 }
 refreshLocale();
 function lessonArt(id) {
@@ -54,17 +45,17 @@ function lessonCards(wide = false, list = lessonData.slice(0,3)) {
     return `<article class="lesson-card ${unlocked?'':'lesson-locked'}"><div class="lesson-art art-${l.color}"><span class="art-number">${pad(l.id)}</span>${lessonArt(l.id)}</div>${done?`<span class="done-badge" aria-label="${t('completed')}">${icon('check')}</span>`:''}<div class="lesson-body"><div class="lesson-meta">${l.category} · ${t('lesson')} ${pad(l.id)}</div><h3>${unlocked?`<a href="#lesson-${l.id}" data-lesson="${l.id}">${l.title}</a>`:l.title}</h3><p>${l.description}</p>${unlocked?'':`<p class="lesson-lock">${icon('lock')} ${t('lockedUntil',{n:l.id-1})}</p>`}<div class="lesson-card-footer"><span class="lesson-duration">${icon('clock')}${l.duration}</span><button class="card-action" data-lesson="${l.id}" ${unlocked?'':'disabled'} aria-label="${unlocked?t('openLesson',{title:l.title}):t('lockedUntil',{n:l.id-1})}">${icon(unlocked?(done?'check':'arrow'):'lock')}</button></div></div></article>`;
   }).join('')}</div>`;
 }
-function nextLesson() { return lessonData.find(l => !state.completed.includes(l.id))?.id || 1; }
+function nextLesson(){return state.sessions[state.lastLesson]&&FLOW.canOpen(state.lastLesson,state.completed,COURSE_TOTAL)&&!state.completed.includes(state.lastLesson)?state.lastLesson:lessonData.find(l=>!state.completed.includes(l.id))?.id||1;}
 function homePage() {
-  const n = state.completed.length, pct = Math.round(n / 12 * 100);
-  return `<div class="page-heading"><div><h1>${t('welcome')}</h1><p>${t('welcomeSub')}</p></div></div>
-  <section class="hero hero-copy-only"><div class="hero-copy"><div class="eyebrow"><span class="line"></span> ${t('heroEyebrow')}</div><h2>${t('heroTitle')}<br><span>${t('heroTitle2')}</span></h2><p>${t('heroDescription')}</p><div class="hero-actions"><button class="button" data-lesson="${nextLesson()}">${t(n===0?'start':n===12?'review':'continue')} ${icon('arrow')}</button></div></div></section>
+  const n = state.completed.length, pct = Math.round(n / COURSE_TOTAL * 100);
+  return `<div class="page-heading"><div><h1>${state.profile.displayName?t('welcomeNamed',{name:escapeHTML(state.profile.displayName)}):t('welcome')}</h1><p>${t('welcomeSub')}</p></div></div>
+  <section class="hero hero-copy-only"><div class="hero-copy"><div class="eyebrow"><span class="line"></span> ${t('heroEyebrow')}</div><h2>${t('heroTitle')}<br><span>${t('heroTitle2')}</span></h2><p>${t('heroDescription')}</p>${resumeSummary()}<div class="hero-actions"><button class="button" data-lesson="${nextLesson()}">${t(state.sessions[nextLesson()]?'continue':n===0?'start':n===COURSE_TOTAL?'review':'continue')} ${icon('arrow')}</button></div></div></section>
   <div class="overview-grid"><div><section aria-labelledby="first-lessons"><div class="section-heading"><div><h2 id="first-lessons">${t('firstSteps')}</h2><p>${t('firstSub')}</p></div><a class="section-link" href="#learn">${t('viewPath')} ${icon('arrow')}</a></div>${lessonCards()}</section><a class="practice-teaser" href="#practice"><span class="teaser-icon">${icon('piano')}</span><div class="teaser-copy"><h3>${t('teaserTitle')}</h3><p>${t('teaserSub')}</p></div><span class="small-pill">${t('freePractice')}</span>${icon('arrow')}</a></div>
-  <aside class="side-stack"><section class="progress-card"><div class="widget-label">${t('stepByStep')}</div><div class="progress-title"><h3>${t('seed')}</h3><span>${pct}%</span></div><div class="progress-track" role="progressbar" aria-label="${t('progressLabel')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div><div class="progress-detail"><span>${t('lessonsCompleted',{n})}</span><span>${t('intro')}</span></div><div class="progress-sub"><div><strong>${n}<small> / 12</small></strong><span>${t('understood')}</span></div><div><strong>${Math.floor(state.practiceSeconds / 60)}<small> ${t('minutes')}</small></strong><span>${t('timePractising')}</span></div></div></section><section class="thought-card"><div class="thought-header">${icon('spark')} ${t('curious')}</div><blockquote>${t('octaveQuestion')}</blockquote><a href="#library" class="section-link">${t('discoverOctave')} ${icon('arrow')}</a></section></aside></div>`;
+  <aside class="side-stack"><section class="progress-card"><div class="widget-label">${t('stepByStep')}</div><div class="progress-title"><h3>${t('seed')}</h3><span>${pct}%</span></div><div class="progress-track" role="progressbar" aria-label="${t('progressLabel')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div><div class="progress-detail"><span>${t('lessonsCompleted',{n})}</span><span>${t('intro')}</span></div><div class="progress-sub"><div><strong>${n}<small> / ${COURSE_TOTAL}</small></strong><span>${t('understood')}</span></div><div><strong>${Math.floor(state.practiceSeconds / 60)}<small> ${t('minutes')}</small></strong><span>${t('timePractising')}</span></div></div></section><section class="thought-card"><div class="thought-header">${icon('spark')} ${t('curious')}</div><blockquote>${t('octaveQuestion')}</blockquote><a href="#library" class="section-link">${t('discoverOctave')} ${icon('arrow')}</a></section></aside></div>`;
 }
 function learnPage() {
-  const groups=[[1,2,'keyboardStage'],[3,5,'readingStage'],[6,7,'rhythmStage'],[8,10,'pitchStage'],[11,12,'chordStage']];
-  return `<div class="page-intro"><div class="eyebrow">${t('learnEyebrow')}</div><h1>${t('learnTitle')}</h1><p>${t('learnSub')}</p></div><div class="course-banner"><div><h2>${t('courseTitle')}</h2><p>${t('courseSummary',{n:state.completed.length})}</p></div><strong>${state.completed.length}/12</strong></div><section class="outcomes"><h2>${t('courseOutcomes')}</h2><ul>${[1,2,3].map(n=>`<li>${t('outcome'+n)}</li>`).join('')}</ul><p>${t('courseLimit')}</p></section>${groups.map(([a,b,key])=>`<section class="course-group"><div class="section-heading"><h2>${t(key)}</h2><span>${pad(a)}–${pad(b)}</span></div>${lessonCards(true,lessonData.filter(l=>l.id>=a&&l.id<=b))}</section>`).join('')}<a href="#song" class="practice-teaser"><span class="teaser-icon">♪</span><div class="teaser-copy"><h3>Happy Birthday</h3><p>${t('songTeaser')}</p></div>${icon('arrow')}</a>`;
+  const groups=[[1,2,'keyboardStage'],[3,5,'readingStage'],[6,7,'rhythmStage'],[8,10,'pitchStage'],[11,12,'chordStage'],[13,14,'extendedRhythmStage'],[15,17,'scoreSignsStage'],[18,20,'sheetApplicationStage']];
+  return `<div class="page-intro"><div class="eyebrow">${t('learnEyebrow')}</div><h1>${t('learnTitle')}</h1><p>${t('learnSub')}</p></div><div class="course-banner"><div><h2>${t('courseTitle')}</h2><p>${t('courseSummary',{n:state.completed.length})}</p></div><strong>${state.completed.length}/${COURSE_TOTAL}</strong></div><section class="outcomes"><h2>${t('courseOutcomes')}</h2><ul>${[1,2,3].map(n=>`<li>${t('outcome'+n)}</li>`).join('')}</ul><p>${t('courseLimit')}</p></section>${groups.map(([a,b,key])=>`<section class="course-group"><div class="section-heading"><h2>${t(key)}</h2><span>${pad(a)}–${pad(b)}</span></div>${lessonCards(true,lessonData.filter(l=>l.id>=a&&l.id<=b))}</section>`).join('')}<a href="#song" class="practice-teaser"><span class="teaser-icon">♪</span><div class="teaser-copy"><h3>Happy Birthday</h3><p>${t('songTeaser')}</p></div>${icon('arrow')}</a>`;
 }
 
 // Unique physical-key mapping covers all 37 notes of three octaves.
@@ -126,6 +117,31 @@ function advanceSong(midi){
   if(songIndex===p.notes.length){songPractising=false;if(!state.songCompleted.includes(songPhrase))state.songCompleted.push(songPhrase);save();updateSongUI(t('phraseComplete',{n:songPhrase+1}));$(`[data-star="${songPhrase}"]`)?.classList.add('earned');const star=$(`[data-star="${songPhrase}"]`);if(star)star.setAttribute('aria-label',t('phrase',{n:songPhrase+1})+': '+t('completed'));$(`[data-phrase="${songPhrase}"]`).textContent=t('phrase',{n:songPhrase+1})+' ★';$('[data-song-reward]').textContent=t(state.songCompleted.length===4?'songComplete':'rewardHint');}
   else updateSongUI();
 }
+function resumeSummary(){
+ const id=nextLesson(),session=state.sessions[id];if(!session)return '';
+ const f=session.flow,detail=f.stage==='read'?t('readingStep',{n:f.readIndex+1,total:window.PHIM_READINGS[id].length}):f.stage==='quiz'?t('quizQuestion',{n:f.index+1,total:window.PHIM_QUIZZES[id].length}):t('flowPractice');
+ return `<p class="resume-summary">${t('resumeAt',{n:id,detail})}</p>`;
+}
+let pendingImport=null;
+function profilePage(){
+ return `<div class="page-intro"><div class="eyebrow">${t('yourSpace')}</div><h1>${t('profileTitle')}</h1><p>${t('profileIntro')}</p></div><div class="profile-grid"><section class="profile-card"><h2>${t('learnerName')}</h2><form id="profile-form"><label for="display-name">${t('optionalName')}</label><input id="display-name" name="displayName" type="text" maxlength="40" autocomplete="nickname" value="${escapeHTML(state.profile.displayName)}" placeholder="${t('namePlaceholder')}"><button class="button" type="submit">${t('saveProfile')}</button><p id="profile-status" role="status"></p></form><div class="profile-stats"><strong>${state.completed.length}/${COURSE_TOTAL}</strong><span>${t('profileLessons')}</span></div><p class="storage-note" data-save-status>${t(storageOK?'sessionSaved':'storageBlocked')}</p><p class="storage-note">${t('profilePrivacy')}</p></section><section class="profile-card"><h2>${t('backupTitle')}</h2><p>${t('backupHelp')}</p><button class="button soft" data-export-progress>${t('exportProgress')}</button><label class="import-label" for="progress-file">${t('importProgress')}</label><input id="progress-file" type="file" accept="application/json,.json" data-import-progress><p id="import-status" role="status"></p>${pendingImport?`<div class="import-preview"><strong>${t('importPreview')}</strong><p>${t('importSummary',{name:escapeHTML(pendingImport.profile.displayName)||t('newcomer'),n:pendingImport.completed.length})}</p><p>${t('importReplaces')}</p><button class="button" data-confirm-import>${t('confirmImport')}</button><button class="button secondary" data-cancel-import>${t('cancelImport')}</button></div>`:''}<p class="storage-note">${t('backupWarning')}</p></section></div>`;
+}
+function exportProgress(){
+ persistLesson();const blob=new Blob([JSON.stringify(LEARNER.backup(state),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='phim-progress-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast(t('exportDone'));
+}
+async function readProgressFile(file){
+ if(!file)return;pendingImport=null;
+ try{if(file.size>256*1024)throw new Error('Too large');pendingImport=LEARNER.restore(JSON.parse(await file.text()),window.PHIM_COURSE,window.PHIM_QUIZZES,window.PHIM_READINGS,FLOW);render();}
+ catch{$('#import-status').textContent=t('importError');}
+}
+function confirmImport(){
+ if(!pendingImport)return;state=pendingImport;pendingImport=null;volume=state.volume;save();render();$('#import-status').textContent=t(storageOK?'importDone':'storageBlocked');
+}
+document.addEventListener('submit',event=>{
+ if(event.target.id!=='profile-form')return;event.preventDefault();state.profile.displayName=$('#display-name').value.trim().slice(0,40);save();renderShell();$('#profile-status').textContent=t(storageOK?'profileSaved':'storageBlocked');
+});
+
 function feedbackPage(){return `<div class="page-intro"><div class="eyebrow">${t('feedbackEyebrow')}</div><h1>${t('feedbackTitle')}</h1><p>${t('feedbackIntro')}</p></div><div class="feedback-layout"><section class="feedback-card"><span class="feedback-icon">${icon('note')}</span><h2>${t('reportBug')}</h2><p>${t('reportBugText')}</p><ul><li>${t('reportDetail1')}</li><li>${t('reportDetail2')}</li><li>${t('reportDetail3')}</li></ul><a class="button" href="${BUG_REPORT_URL}" target="_blank" rel="noopener noreferrer">${t('openSurvey')} ${icon('arrow')}</a><p class="storage-note">${t('surveyExternal')}</p></section><section class="feedback-card"><h2>${t('suggestFeature')}</h2><p>${t('suggestText')}</p><a class="button soft" href="${IMPROVEMENT_URL}" target="_blank" rel="noopener noreferrer">${t('sendSuggestion')} ${icon('arrow')}</a><h3>${t('quickHelp')}</h3><p>${t('quickHelpText')}</p></section></div>`;}
 function libraryPage() { return `<div class="page-intro"><div class="eyebrow">${t('libraryEyebrow')}</div><h1>${t('libraryTitle')}</h1><p>${t('librarySub')}</p></div><label class="search-box" style="display:block">${icon('search')}<input type="search" id="term-search" placeholder="${t('searchPlaceholder')}" aria-label="${t('search')}"></label><div class="terms-grid" id="terms-grid">${termCards(terms)}</div>`; }
 function termCards(list) { return list.length ? list.map(term=>`<article class="term-card"><span class="term-en">${term.en}</span><h2>${term.name}</h2><p>${term.text}</p><div class="term-example">${term.example}</div>${term.demo?`<button class="button soft" data-sound="${term.demo}">${icon('volume')} ${t('listenDemo')}</button>`:term.route?`<a class="button soft" href="#${term.route}">${t('tryPractice')} ${icon('arrow')}</a>`:''}</article>`).join('') : `<p class="empty-search">${t('emptySearch')}</p>`; }
@@ -136,6 +152,7 @@ function renderShell() {
   for(const [selector,key] of Object.entries(content))$(selector).innerHTML=t(key);
   $$('.brand,.header-logo').forEach(el=>el.setAttribute('aria-label',t('brandHome')));$('.main-nav').setAttribute('aria-label',t('nav'));$('.close-modal').setAttribute('aria-label',t('close'));
   $$('.nav-link').forEach(a=>$('span',a).textContent=t(a.dataset.route));
+  $('.nav-count').textContent=COURSE_TOTAL;$('.sidebar-bottom strong').textContent=state.profile.displayName||t('newcomer');
   $$('[data-copy]').forEach(el=>el.textContent=t(el.dataset.copy));
   $$('.footer>span')[1].innerHTML=`${t('madeWith')} <span class="orange">✦</span>`;
   $$('[data-language]').forEach(el=>{el.value=state.language;el.setAttribute('aria-label',t('language'));});
@@ -144,32 +161,32 @@ let route = 'home';
 function render() {
   stopMetronome();refreshLocale();renderShell();
   route = Object.hasOwn(routeTitles, location.hash.slice(1)) ? location.hash.slice(1) : 'home';
-  $('#main').innerHTML = ({home:homePage,learn:learnPage,practice:practicePage,song:songPage,library:libraryPage,feedback:feedbackPage})[route]();
+  $('#main').innerHTML = ({home:homePage,learn:learnPage,practice:practicePage,song:songPage,library:libraryPage,feedback:feedbackPage,profile:profilePage})[route]();
   $('#breadcrumb').textContent = routeTitles[route];
   $$('.nav-link').forEach(a => { a.classList.toggle('active',a.dataset.route === route); if(a.dataset.route===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current'); });
   document.title = `${routeTitles[route]} · phím. — ${state.language==='en'?'Understand, then play':'Hiểu rồi chơi'}`;
 }
 
-let audioCtx, volume = .6, soundGeneration = 0, activeNodes = new Set();
+let audioCtx,audioOutput, volume = state.volume, soundGeneration = 0, activeNodes = new Set();
 async function ensureAudio() {
   const AudioCtor = window.AudioContext || window.webkitAudioContext;
   if(!AudioCtor) { toast(t('audioUnavailable')); return null; }
-  if(!audioCtx) audioCtx = new AudioCtor();
+  if(!audioCtx){audioCtx=new AudioCtor();audioOutput=audioCtx.createDynamicsCompressor();audioOutput.threshold.value=-12;audioOutput.knee.value=12;audioOutput.ratio.value=8;audioOutput.attack.value=.003;audioOutput.release.value=.18;audioOutput.connect(audioCtx.destination);}
   if(audioCtx.state === 'suspended') await audioCtx.resume();
   return audioCtx;
 }
 function tone(midi, when, duration = 1.2, strength = 1) {
   if(!audioCtx || volume === 0)return;
   const frequency = 440 * Math.pow(2,(midi - 69)/12);
-  const gain = audioCtx.createGain();
+  const voice=window.PHIM_AUDIO.profile(midi),gain=audioCtx.createGain();
   gain.gain.setValueAtTime(0,when);
-  gain.gain.linearRampToValueAtTime(volume * .19 * strength,when + .009);
+  gain.gain.linearRampToValueAtTime(volume * .19 * Math.max(0,Math.min(1,strength)) * voice.boost,when + .009);
   gain.gain.exponentialRampToValueAtTime(.001,when+duration);
-  gain.connect(audioCtx.destination);
+  gain.connect(audioOutput);
   [1,2,3,4].forEach((harmonic,i)=>{
     const oscillator = audioCtx.createOscillator(), partial = audioCtx.createGain();
     oscillator.type='sine';oscillator.frequency.value=frequency*harmonic;
-    partial.gain.value=[1,.28,.1,.035][i];oscillator.connect(partial);partial.connect(gain);
+    partial.gain.value=voice.partials[i];oscillator.connect(partial);partial.connect(gain);
     oscillator.start(when);oscillator.stop(when+duration+.03);activeNodes.add(oscillator);
     oscillator.onended=()=>{activeNodes.delete(oscillator);oscillator.disconnect();partial.disconnect();if(i===3)gain.disconnect();};
   });
@@ -182,12 +199,12 @@ function showNote(midi) {
   $$('[data-note-name]').forEach(el=>el.textContent=solfege(midi));
   $$('[data-note-detail]').forEach(el=>el.textContent=`${Math.round(440*Math.pow(2,(midi-69)/12))} Hz · ${midi===60?t('middleC'):t('octaveNumber',{n:Math.floor(midi/12)-1})}`);
 }
-async function playKey(midi) {
-  const ctx=await ensureAudio();
-  if(ctx)tone(midi,ctx.currentTime);
+async function playKey(midi){
+  // Score immediately in input order, independently of audio permission/resume.
+  if(activeLesson&&!lessonCompletedView)advanceTask(midi);
+  else if(route==='song'&&songPractising)advanceSong(midi);
   flash(midi);showNote(midi);
-  if(activeLesson && !lessonCompletedView) advanceTask(midi);
-  else if(route==='song' && songPractising) advanceSong(midi);
+  const ctx=await ensureAudio();if(ctx)tone(midi,ctx.currentTime);
 }
 async function playSound(kind) {
   const ctx=await ensureAudio();if(!ctx)return;
@@ -229,125 +246,186 @@ async function startMetronome(){
 }
 function clickTone(at,accent=false){
   const osc=audioCtx.createOscillator(),g=audioCtx.createGain();
-  osc.frequency.value=accent?1100:800;g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+.055);osc.connect(g);g.connect(audioCtx.destination);osc.start(at);osc.stop(at+.06);osc.onended=()=>{osc.disconnect();g.disconnect();};
+  osc.frequency.value=accent?1100:800;g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+.055);osc.connect(g);g.connect(audioOutput);osc.start(at);osc.stop(at+.06);osc.onended=()=>{osc.disconnect();g.disconnect();};
 }
 function stopMetronome(){metroRunning=false;metroGeneration++;clearTimeout(metroTimer);$$('.beat-dot').forEach(d=>d.classList.remove('on'));if($('#metro-toggle'))$('#metro-toggle').innerHTML=`${icon('play')} ${t('startMetro')}`;}
 let activeLesson=null,passed=false,returnFocus=null;
-let taskIndex=0, lessonFlow=window.PHIM_LESSON_FLOW.initial(), lessonCompletedView=false;
+let lessonFlow=FLOW.initial(),lessonCompletedView=false;
+function persistLesson(){
+  if(activeLesson&&!lessonCompletedView){state.lastLesson=activeLesson;state.sessions[activeLesson]={version:LEARNER.VERSION,updatedAt:new Date().toISOString(),flow:lessonFlow};}
+  save();
+}
+function currentQuestion(){return FLOW.currentQuestion(window.PHIM_QUIZZES[activeLesson],lessonFlow);}
+function missedQuestions(l){return window.PHIM_QUIZZES[l.id].filter(q=>lessonFlow.missed.includes(q.id));}
 function readingPage(l){
-  return `<div class="lesson-reading"><div class="lesson-topline">${t('flowRead')}</div><h2 id="lesson-title">${l.title}</h2><p class="lesson-lead">${l.description}</p>${lessonFlow.reviewRequired?`<div class="review-notice" role="status"><strong>${t('reviewTitle')}</strong><p>${t('reviewMessage')}</p></div>`:''}<div class="learning-goal"><div><strong>${t('afterLesson')}</strong><ul>${l.goals.map(g=>`<li>${g}</li>`).join('')}</ul></div></div><section class="lesson-section"><h3>${t('understand')}</h3>${l.theory.map(p=>`<p>${p}</p>`).join('')}<div class="concept-box">${l.concept}</div>${scoreFigure(l)}<button class="button soft reading-listen" data-sound="course-${l.id}">${icon('volume')} ${t('listenExample')}</button></section></div>`;
+  const steps=window.PHIM_READINGS[l.id],step=steps[lessonFlow.readIndex],missed=missedQuestions(l);
+  const targeted=missed.filter(q=>q.step===lessonFlow.readIndex);
+  return `<div class="lesson-reading"><div class="reading-meta"><span>${t('readingStep',{n:lessonFlow.readIndex+1,total:steps.length})}</span><span>${l.title}</span></div><nav class="reading-tabs" aria-label="${t('readingSteps')}">${steps.map((item,i)=>`<button data-read-step="${i}" ${i>lessonFlow.readSeen?'disabled':''} ${i===lessonFlow.readIndex?'aria-current="step"':''}>${i+1}. ${L(item.title)}${lessonFlow.reviewRequired&&missed.some(q=>q.step===i)?`<small>${t('needsReview')}</small>`:''}</button>`).join('')}</nav>${lessonFlow.reviewRequired?`<aside class="review-notice" role="status"><strong>${t('reviewTitle')}</strong><p>${t('targetedReview')}</p><ul>${[...new Set(missed.map(q=>q.step))].map(i=>`<li><button class="text-button" data-read-step="${i}">${L(steps[i].title)}</button></li>`).join('')}</ul></aside>`:''}<h2 id="lesson-title">${L(step.title)}</h2><section class="lesson-section reading-step ${targeted.length?'review-highlight':''}"><p>${L(step.body)}</p><div class="remember-box"><span>${t('remember')}</span><strong>${L(step.remember)}</strong></div>${targeted.length?`<div class="targeted-help"><strong>${t('reviewFocus')}</strong><ul>${targeted.map(q=>`<li>${L(q.explanation)}</li>`).join('')}</ul></div>`:''}${readingFigure(step)}<button class="button soft reading-listen" data-reading-listen>${icon('volume')} ${t('listenThisStep')}</button></section></div>`;
 }
 function quizPage(l){
-  const questions=window.PHIM_QUIZZES[l.id],q=questions[lessonFlow.index],answered=!!lessonFlow.feedback;
-  return `<section class="quiz-page"><div class="quiz-meta"><span>${t('quizQuestion',{n:lessonFlow.index+1,total:questions.length})}</span><span>${t('quizMistakes',{n:lessonFlow.mistakes})}</span></div><h2 id="lesson-title">${L(q.question)}</h2><p class="quiz-instruction">${t('quizSelect')}</p><div class="quiz-options" role="group" aria-labelledby="lesson-title">${L(q.options).map((option,i)=>`<button type="button" class="quiz-option ${lessonFlow.choice===i?'selected':''} ${answered&&lessonFlow.choice===i?lessonFlow.feedback:''}" data-choice="${i}" aria-pressed="${lessonFlow.choice===i}" ${answered?'disabled':''}><span class="choice-letter">${String.fromCharCode(65+i)}</span><span>${option}</span>${answered&&lessonFlow.choice===i?icon(lessonFlow.feedback==='correct'?'check':'close'):''}</button>`).join('')}</div><div class="quiz-feedback ${lessonFlow.feedback||''}" role="status" aria-live="polite" aria-atomic="true">${lessonFlow.feedback==='correct'?`<strong>${t('quizCorrect')}</strong><p>${L(q.explanation)}</p>`:lessonFlow.feedback==='wrong'?`<strong>${t('quizWrong')}</strong><p>${t('quizWrongHelp',{n:4-lessonFlow.mistakes})}</p>`:''}</div><p class="quiz-policy">${t('quizPolicy')}</p></section>`;
+  const questions=window.PHIM_QUIZZES[l.id],q=currentQuestion(),answered=!!lessonFlow.feedback;
+  return `<section class="quiz-page"><div class="quiz-meta"><span>${t('quizQuestion',{n:lessonFlow.index+1,total:questions.length})}</span><span>${t('quizMistakes',{n:lessonFlow.mistakes})}</span></div><h2 id="lesson-title">${L(q.question)}</h2><p class="quiz-instruction">${t('quizSelect')}</p><div class="quiz-options" role="group" aria-labelledby="lesson-title">${L(q.options).map((option,i)=>`<button type="button" class="quiz-option ${lessonFlow.choice===i?'selected':''} ${answered&&lessonFlow.choice===i?lessonFlow.feedback:''}" data-choice="${i}" aria-pressed="${lessonFlow.choice===i}" ${answered?'disabled':''}><span class="choice-letter">${String.fromCharCode(65+i)}</span><span>${option}</span>${answered&&lessonFlow.choice===i?icon(lessonFlow.feedback==='correct'?'check':'close'):''}</button>`).join('')}</div><div class="quiz-feedback ${lessonFlow.feedback||''}" role="status" aria-live="polite" aria-atomic="true">${lessonFlow.feedback==='correct'?`<strong>${t('quizCorrect')}</strong><p>${L(q.explanation)}</p>`:lessonFlow.feedback==='wrong'?`<strong>${t('quizWrong')}</strong><p>${t('quizWrongHelp',{n:4-lessonFlow.mistakes})}</p><p>${t('reviewTopic',{topic:L(window.PHIM_READINGS[l.id][q.step].title)})}</p>`:''}</div><p class="quiz-policy">${t('quizPolicy')}</p></section>`;
+}
+function practiceStatus(l){
+ const p=lessonFlow.practice;
+ if(p.mode==='passed')return t('testPassed');
+ if(p.mode==='failed')return t('testFailed',{note:noteName(p.lastWrong),n:p.failures});
+ if(p.mode==='train'&&p.redirected)return t('backToTraining');
+ if(p.mode==='train'&&p.index>=l.target.length)return t('trainingDone');
+ if(p.lastWrong!==null)return t('noteHint',{played:noteName(p.lastWrong),note:noteName(l.target[p.index])});
+ return t('nextNote',{note:noteName(l.target[p.index])});
 }
 function practiceLessonPage(l){
-  return `<section class="lesson-practice"><div class="lesson-topline">${t('flowPractice')}</div><h2 id="lesson-title">${t('practiceAfterQuiz')}</h2><p class="lesson-lead">${l.task}</p><button class="button soft" data-sound="course-${l.id}">${icon('volume')} ${t('listenExample')}</button><div class="task-track" aria-live="polite"><span data-task-count>${taskIndex}/${l.target.length}</span><strong data-task-next>${taskIndex>=l.target.length?t('taskDone'):t('nextNote',{note:noteName(l.target[taskIndex])})}</strong><button class="text-button" data-retry-task>${t('retryTask')}</button></div>${liveNote()}${keyboard()}<p class="storage-note">${t('practiceCheckLimit')}</p></section>`;
+ const p=lessonFlow.practice,isTest=['test','failed','passed'].includes(p.mode);
+ return `<section class="lesson-practice"><div class="practice-mode ${isTest?'is-test':''}">${t(isTest?'keyboardTest':'guidedPractice')}</div><h2 id="lesson-title">${t(isTest?'testHeading':'practiceAfterQuiz')}</h2><p class="lesson-lead">${l.task}</p><p class="practice-rule">${t(isTest?'testRule':'trainingRule')}</p><button class="button soft" data-sound="course-${l.id}" ${p.mode==='test'?'disabled':''}>${icon('volume')} ${t('listenExample')}</button><div class="task-track ${p.mode==='failed'?'task-failed':''}" aria-live="polite"><span data-task-count>${p.index}/${l.target.length}</span><strong data-task-next>${practiceStatus(l)}</strong>${p.mode==='train'?`<button class="text-button" data-retry-task>${t('retryTask')}</button>`:''}</div>${liveNote()}${keyboard()}<label class="volume-control lesson-volume">${icon('volume')}<span>${t('volume')}</span><input type="range" min="0" max="100" value="${Math.round(volume*100)}" data-volume aria-label="${t('volume')}"></label><p class="storage-note">${t('practiceCheckLimit')}</p></section>`;
 }
 function lessonFooter(l){
-  if(lessonFlow.stage==='read')return `<p>${t('readBeforeQuiz',{n:window.PHIM_QUIZZES[l.id].length})}</p><button class="button" data-begin-quiz>${t(lessonFlow.reviewRequired?'restartQuiz':'beginQuiz')} ${icon('arrow')}</button>`;
-  if(lessonFlow.stage==='quiz')return `<p>${t('quizFooter')}</p>${!lessonFlow.feedback?`<button class="button" data-check-quiz ${lessonFlow.choice===null?'disabled':''}>${t('checkChoice')} ${icon('check')}</button>`:`<button class="button" data-advance-quiz>${t(lessonFlow.feedback==='wrong'?'retryQuestion':lessonFlow.index===window.PHIM_QUIZZES[l.id].length-1?'quizToPractice':'quizNext')} ${icon('arrow')}</button>`}`;
-  return `<p>${t('practiceFinishHint')}</p><button class="button" id="complete-lesson" ${passed?'':'disabled'}>${t('finish')} ${icon('check')}</button>`;
+ if(lessonFlow.stage==='read'){
+   const steps=window.PHIM_READINGS[l.id];
+   return `<p>${t('readBeforeQuiz',{n:window.PHIM_QUIZZES[l.id].length})}</p><div class="reading-actions"><button class="button secondary" data-read-prev ${lessonFlow.readIndex===0?'disabled':''}>${t('previousStep')}</button>${lessonFlow.readIndex<steps.length-1&&!lessonFlow.reviewRequired?`<button class="button" data-read-next>${t('nextReading')} ${icon('arrow')}</button>`:`<button class="button" data-begin-quiz>${t(lessonFlow.reviewRequired?'restartQuiz':'beginQuiz')} ${icon('arrow')}</button>`}</div>`;
+ }
+ if(lessonFlow.stage==='quiz')return `<p>${t('quizFooter')}</p>${!lessonFlow.feedback?`<button class="button" data-check-quiz ${lessonFlow.choice===null?'disabled':''}>${t('checkChoice')} ${icon('check')}</button>`:`<button class="button" data-advance-quiz>${t(lessonFlow.feedback==='wrong'?'retryQuestion':lessonFlow.index===window.PHIM_QUIZZES[l.id].length-1?'quizToPractice':'quizNext')} ${icon('arrow')}</button>`}`;
+ const p=lessonFlow.practice;
+ return `<p>${t(p.mode==='train'?'trainingFinishHint':p.mode==='failed'?'testRetryHint':'practiceFinishHint')}</p>${p.mode==='train'?`<button class="button" data-start-test ${p.index<l.target.length?'disabled':''}>${t('startKeyboardTest')} ${icon('arrow')}</button>`:p.mode==='failed'?`<button class="button" data-start-test>${t('retryKeyboardTest')}</button>`:`<button class="button" id="complete-lesson" ${passed?'':'disabled'}>${t('finish')} ${icon('check')}</button>`}`;
 }
-function refreshPass(){
-  const l=lessonData.find(l=>l.id===activeLesson);
-  passed=!!l&&lessonFlow.stage==='practice'&&taskIndex>=l.target.length;
-  const b=$('#complete-lesson');if(b)b.disabled=!passed;
-}
+function refreshPass(){passed=!!activeLesson&&lessonFlow.stage==='practice'&&lessonFlow.practice.mode==='passed';const b=$('#complete-lesson');if(b)b.disabled=!passed;}
 function advanceTask(midi){
-  if(lessonFlow.stage!=='practice')return;
-  const l=lessonData.find(l=>l.id===activeLesson);if(taskIndex>=l.target.length)return;
-  if(midi===l.target[taskIndex]){taskIndex++;$('[data-task-count]').textContent=`${taskIndex}/${l.target.length}`;$('[data-task-next]').textContent=taskIndex===l.target.length?t('taskDone'):t('nextNote',{note:noteName(l.target[taskIndex])});}
-  else $('[data-task-next]').textContent=t('noteHint',{played:noteName(midi),note:noteName(l.target[taskIndex])});
-  refreshPass();
+ if(lessonFlow.stage!=='practice')return;
+ const l=lessonData.find(l=>l.id===activeLesson),previous=lessonFlow.practice;
+ const practice=FLOW.playNote(previous,midi,l.target);if(previous===practice)return;
+ lessonFlow={...lessonFlow,practice};persistLesson();
+ if(previous.mode!==practice.mode){renderLesson();return;}
+ $('[data-task-count]').textContent=`${practice.index}/${l.target.length}`;$('[data-task-next]').textContent=practiceStatus(l);
+ if(practice.mode==='train'){const button=$('[data-start-test]');if(button)button.disabled=practice.index<l.target.length;}
+ refreshPass();
 }
-// Staff geometry: bottom treble line E4=64, bottom bass line G2=43.
-function scoreSVG(notes,{clef='treble',labels=true,width=620,time='',durations=[],harmony=false}={}){
-  const letters={0:0,1:0,2:1,3:2,4:2,5:3,6:4,7:4,8:4,9:5,10:5,11:6};
-  const diatonic=m=>7*(Math.floor(m/12)-1)+letters[m%12];
-  const bottom=clef==='bass'?diatonic(43):diatonic(64);
-  const left=time?116:85,step=(width-left-34)/Math.max(notes.length-1,1);
-  const lines=[48,60,72,84,96].map(y=>`<line x1="25" x2="${width-12}" y1="${y}" y2="${y}"/>`).join('');
-  const glyph=clef==='bass'?'𝄢':'𝄞';
-  const seenAccidentals=new Map();
-  const heads=notes.map((group,i)=>{
-    group=Array.isArray(group)?group:[group]; const x=notes.length===1?width/2:left+i*step;
-    return group.map(m=>{const d=diatonic(m)-bottom,y=96-6*d;let ledger='';
-      for(let q=-2;q>=d;q-=2)ledger+=`<line class="score-ledger" x1="${x-13}" x2="${x+13}" y1="${96-q*6}" y2="${96-q*6}"/>`;
-      for(let q=10;q<=d;q+=2)ledger+=`<line class="score-ledger" x1="${x-13}" x2="${x+13}" y1="${96-q*6}" y2="${96-q*6}"/>`;
-      const altered=[1,3,6,8,10].includes(m%12);
-      const sign=altered?([3,6,10].includes(m%12)?'♭':'♯'):(seenAccidentals.get(d)?'♮':'');
-      seenAccidentals.set(d,altered);
-      const accidental=sign?`<text x="${x-22}" y="${y+4}" class="score-flat">${sign}</text>`:'';
-      const label=noteName(m).replace('D♯','E♭').replace('F♯','G♭').replace('A♯','B♭');
-      const duration=durations[i]??1;const down=harmony?group.reduce((sum,n)=>sum+96-6*(diatonic(n)-bottom),0)/group.length<72:y<72;
-      const stemX=x+(down?-7:7),stemY=y+(down?34:-34);
-      return `${ledger}${accidental}<ellipse cx="${x}" cy="${y}" rx="7.5" ry="5" transform="rotate(-18 ${x} ${y})" class="score-note" style="${duration>=2?'fill:#fbfaf6':''}"/>${duration<4?`<path class="score-stem" d="M${stemX} ${y}V${stemY}"/>`:''}${duration===.5?`<path class="score-stem" fill="none" d="M${stemX} ${stemY}q${down?'-14 -4 -7 -18':'14 4 7 18'}"/>`:''}${labels?`<text x="${x}" y="${harmony?y+4:147}" text-anchor="${harmony?'start':'middle'}" dx="${harmony?15:0}" class="score-under">${label}</text>`:''}`;
-    }).join('');
+async function listenReading(){
+ const lesson=activeLesson,step=window.PHIM_READINGS[lesson][lessonFlow.readIndex];
+ const ctx=await ensureAudio();if(!ctx||lesson!==activeLesson||lessonFlow.stage!=='read')return;
+ cancelDemo();const start=ctx.currentTime+.03;let at=0;
+ const emit=(notes,duration=1,strength=1)=>{(Array.isArray(notes)?notes:[notes]).forEach(n=>tone(n,start+at,Math.max(.15,duration*.7),Array.isArray(notes)?.55*strength:strength));at+=duration*(step.kind==='piece'?1:.75);};
+ if(['compound','meterCompare'].includes(step.kind)){
+   for(const group of step.kind==='compound'?[3]:[2,3])for(let i=0;i<6;i++)emit(step.notes[i],.5,i%group===0?1:.45);
+ }else if(step.kind==='repeat'){for(let pass=0;pass<2;pass++)step.notes.forEach(n=>emit(n));}
+ else if(step.kind==='tie')emit(step.notes[0],2);
+ else if(step.kind==='values')step.notes.forEach((n,i)=>emit(n,[4,2,1,.5][i]));
+ else if(step.kind==='dynamics')step.notes.forEach((n,i)=>emit(n,1,[.25,.45,.7,1][i]));
+ else if(step.kind==='articulation')step.notes.forEach((n,i)=>{tone(n,start+i*.8,i===2?1.6:.2,.8);});
+ else if(step.kind==='heldBass'){tone(48,start,3,.65);step.notes.forEach(n=>emit(n));}
+ else step.notes.forEach((n,i)=>emit(n,step.kind==='piece'?(i<4?1:2):(step.durations?.[i]||1)));
+}
+// Original, semantic SVG notation. Spellings determine vertical positions, so
+// E-flat is placed on E's line/space rather than D's.
+function scoreSVG(notes,{clef='treble',labels=true,width=620,time='',denominator='4',durations=[],harmony=false,spelling=[],key='',repeat=false,tie=false,alignFirst=false,staccato=false}={}){
+ const names=['C','C♯','D','E♭','E','F','F♯','G','G♯','A','B♭','B'];
+ const letters={C:0,D:1,E:2,F:3,G:4,A:5,B:6};
+ const parse=(m,label)=>{
+   const text=label||names[m%12]+(Math.floor(m/12)-1),match=text.match(/^([A-G])([♯♭♮]?)(-?\d+)$/);
+   return {text,letter:match[1],acc:match[2],d:7*Number(match[3])+letters[match[1]]};
+ };
+ const bottom=clef==='bass'?7*2+letters.G:7*4+letters.E;
+ const left=time||key||repeat?122:85,step=(width-left-45)/Math.max(notes.length-1,1);
+ const xAt=i=>notes.length===1&&!alignFirst?width/2:left+i*step;
+ const lines=[48,60,72,84,96].map(y=>`<line x1="25" x2="${width-12}" y1="${y}" y2="${y}"/>`).join('');
+ const keyDefault=letter=>key==='G'&&letter==='F'?'♯':key==='F'&&letter==='B'?'♭':'';
+ const seen=new Map(),descriptions=[];
+ const ys=notes.flatMap((group,i)=>(Array.isArray(group)?group:[group]).map((m,j)=>96-6*(parse(m,Array.isArray(spelling[i])?spelling[i][j]:spelling[i]).d-bottom)));
+ const labelY=Math.max(151,...ys.map(y=>y+35)),height=Math.max(176,labelY+25);
+ const heads=notes.map((group,i)=>{
+  group=Array.isArray(group)?group:[group];const x=xAt(i);
+  const groupYs=group.map((m,j)=>96-6*(parse(m,Array.isArray(spelling[i])?spelling[i][j]:spelling[i]).d-bottom));
+  return group.map((m,j)=>{
+   const provided=Array.isArray(spelling[i])?spelling[i][j]:spelling[i],n=parse(m,provided),d=n.d-bottom,y=96-6*d;
+   let ledger='';for(let q=-2;q>=d;q-=2)ledger+=`<line class="score-ledger" x1="${x-13}" x2="${x+13}" y1="${96-q*6}" y2="${96-q*6}"/>`;
+   for(let q=10;q<=d;q+=2)ledger+=`<line class="score-ledger" x1="${x-13}" x2="${x+13}" y1="${96-q*6}" y2="${96-q*6}"/>`;
+   const desired=n.acc==='♮'?'':n.acc,previous=seen.has(d)?seen.get(d):keyDefault(n.letter);
+   const sign=desired===previous?'':desired||'♮';seen.set(d,desired);
+   const duration=durations[i]??1,dotted=duration===3||duration===1.5,base=dotted?duration/1.5:duration;
+   const down=harmony?groupYs.reduce((a,b)=>a+b,0)/groupYs.length<72:y<72,stemX=x+(down?-7:7),stemY=harmony?(down?Math.max(...groupYs)+34:Math.min(...groupYs)-34):y+(down?34:-34);
+   descriptions.push(n.text+' · '+duration+' '+t('beatUnit',{n:duration}));
+   return `${ledger}${sign?`<text x="${x-23}" y="${y+4}" class="score-flat">${sign}</text>`:''}<ellipse cx="${x}" cy="${y}" rx="7.5" ry="5" transform="rotate(-18 ${x} ${y})" class="score-note" style="${base>=2?'fill:#fffdf9':''}"/>${base<4?`<path class="score-stem" d="M${stemX} ${y}V${stemY}"/>`:''}${base===.5?`<path class="score-stem" fill="none" d="M${stemX} ${stemY}q${down?'-14 -4 -7 -18':'14 4 7 18'}"/>`:''}${dotted?`<circle class="score-dot" cx="${x+16}" cy="${y-(d%2===0?5:0)}" r="2.5"/>`:''}${staccato?`<circle class="score-dot" cx="${x}" cy="${y+(down?-13:13)}" r="2.5"/>`:''}${labels?`<text x="${x}" y="${harmony?y+4:labelY}" text-anchor="${harmony?'start':'middle'}" dx="${harmony?16:0}" class="score-under">${n.text}</text>`:''}`;
   }).join('');
-  return `<svg viewBox="0 0 ${width} 170" role="img" aria-label="${t('scoreAlt')}"><g class="score-staff">${lines}<text x="25" y="${clef==='bass'?83:91}" class="score-clef">${glyph}</text>${time?`<text x="83" y="70" class="score-time">${time}</text><text x="83" y="91" class="score-time">4</text>`:''}${heads}${time?`<line class="score-bar" x1="${width-15}" x2="${width-15}" y1="48" y2="96"/>`:''}</g></svg>`;
+ }).join('');
+ const keyGlyph=key?`<text class="score-flat" x="78" y="${key==='G'?(clef==='bass'?64:52):(clef==='bass'?88:76)}">${key==='G'?'♯':'♭'}</text>`:'';
+ const repeats=repeat?`<path d="M92 48v48m5-48v48M${width-21} 48v48m6-48v48" class="score-stem"/><g class="score-dot"><circle cx="105" cy="66" r="2.5"/><circle cx="105" cy="78" r="2.5"/><circle cx="${width-29}" cy="66" r="2.5"/><circle cx="${width-29}" cy="78" r="2.5"/></g>`:'';
+ const tieY=notes.length?96-6*(parse(Array.isArray(notes[0])?notes[0][0]:notes[0],Array.isArray(spelling[0])?spelling[0][0]:spelling[0]).d-bottom)+13:110;
+ const tied=tie?`<path d="M${xAt(0)+6} ${tieY}Q${(xAt(0)+xAt(1))/2} ${tieY+21} ${xAt(1)-6} ${tieY}" fill="none" stroke="currentColor" stroke-width="2"/>`:'';
+ const alt=t('scoreDescription',{clef:t(clef==='bass'?'bassClef':'trebleClef'),notes:descriptions.join('; ')});
+ return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHTML(alt)}"><title>${escapeHTML(alt)}</title><g class="score-staff">${lines}<text x="25" y="${clef==='bass'?83:91}" class="score-clef">${clef==='bass'?'𝄢':'𝄞'}</text>${keyGlyph}${time?`<text x="86" y="70" class="score-time">${time}</text><text x="86" y="91" class="score-time">${denominator}</text>`:''}${heads}${tied}${repeats}${time?`<line class="score-bar" x1="${width-15}" x2="${width-15}" y1="48" y2="96"/>`:''}</g></svg>`;
 }
-function scoreFigure(l){
-  let body='';
-  const labels=items=>`<div class="visual-labels">${items.map(x=>`<span>${x}</span>`).join('')}</div>`;
-  if(l.figure==='map')body=`<div class="map-piano">${['C','D','E','F','G','A','B'].map((n,i)=>`<div>${n}${[0,1,3,4,5].includes(i)?'<b></b>':''}</div>`).join('')}</div>${labels([t('twoBlack'),t('threeBlack')])}`;
-  if(l.figure==='octave')body=scoreSVG([60,72])+labels(['C4 → C5 = 12 '+t('semitones')]);
-  if(l.figure==='treble')body=scoreSVG([64,67,71,74,77])+scoreSVG([65,69,72,76]);
-  if(l.figure==='grand')body=`<div class="grand-staff">${scoreSVG([60])}${scoreSVG([60],{clef:'bass'})}</div>${labels([t('sameMiddleC')])}`;
-  if(l.figure==='ledger')body=scoreSVG([60,62,64,77,79,81]);
-  if(l.figure==='values')body=`<div class="note-values">${[['𝅝','𝄻','4'],['𝅗𝅥','𝄼','2'],['♩','𝄽','1'],['♪','𝄾','½']].map(([n,r,b])=>`<div><strong>${n}</strong><strong>${r}</strong><span>${b} ${t('beatUnit',{n:b=='1'?1:2})}</span></div>`).join('')}</div><p>${t('restLegend')}</p>`;
-  if(l.figure==='meter')body=scoreSVG([60,60,60,60],{time:'4'})+scoreSVG([60,60,60],{time:'3'});
-  if(l.figure==='accidentals')body=scoreSVG([64,65,63,64])+labels(['E → F (E♯)','E♭ → E♮']);
-  if(l.figure==='intervals')body=scoreSVG([60,64,60,63,60,67])+labels([t('majorThird'),t('minorThird'),t('perfectFifth')]);
-  if(l.figure==='scale')body=scoreSVG([60,62,64,65,67,69,71,72])+labels(['2 – 2 – 1 – 2 – 2 – 2 – 1']);
-  if(l.figure==='triads')body=labels(['C','Cm','Cdim'])+scoreSVG([[60,64,67],[60,63,67],[60,63,66]],{harmony:true});
-  if(l.figure==='inversions')body=labels([t('rootPosition'),t('inversion1'),t('inversion2')])+scoreSVG([[60,64,67],[64,67,72],[67,72,76]],{harmony:true});
-  return `<figure class="score-example"><figcaption><strong>${t('visualExample')} · ${l.title}</strong><span>${l.concept}</span></figcaption>${body}</figure>`;
+function readingFigure(s){
+ let body='';const opts={clef:s.clef||'treble',durations:s.durations||[],harmony:s.harmony||false,spelling:s.spelling||[],time:s.time||''};
+ const labels=items=>`<div class="visual-labels">${items.map(x=>`<span>${x}</span>`).join('')}</div>`;
+ if(s.kind==='map')body=`<div class="map-piano">${['C','D','E','F','G','A','B'].map((n,i)=>`<div>${n}${[0,1,3,4,5].includes(i)?'<b></b>':''}</div>`).join('')}</div>${labels([t('twoBlack'),t('threeBlack')])}`;
+ else if(s.kind==='keyboard')body=`<div class="letter-keys">${['C','D','E','F','G','A','B','C'].map(x=>`<span>${x}</span>`).join('')}</div>`;
+ else if(['values','rests'].includes(s.kind))body=`<div class="note-values">${[['𝅝','𝄻','4'],['𝅗𝅥','𝄼','2'],['♩','𝄽','1'],['♪','𝄾','½']].map(([n,r,b])=>`<div><strong>${n}</strong><strong>${r}</strong><span>${b} ${t('beatUnit',{n:b==='1'?1:2})}</span></div>`).join('')}</div><p>${t('restLegend')}</p>`;
+ else if(s.kind==='grand')body=`<div class="grand-staff">${scoreSVG([60])}${scoreSVG([60],{clef:'bass'})}</div>${labels([t('sameMiddleC')])}`;
+ else if(s.kind==='meter')body=scoreSVG([60,62,64,65],{time:'4'})+scoreSVG([60,62,64],{time:'3'});
+ else if(s.kind==='tie')body=scoreSVG([60,60],{tie:true})+labels([t('tieExample')]);
+ else if(['compound','meterCompare'].includes(s.kind))body=scoreSVG(s.notes,{...opts,time:s.kind==='compound'?'6':'3',denominator:s.kind==='compound'?'8':'4'})+`<div class="beat-groups">${(s.kind==='compound'?['1 la li','2 la li']:['1 &','2 &','3 &']).map(x=>`<strong>${x}</strong>`).join('')}</div>`;
+ else if(s.kind==='gKey'||s.kind==='fKey')body=scoreSVG(s.notes,{...opts,key:s.kind==='gKey'?'G':'F'});
+ else if(s.kind==='dynamics')body=scoreSVG(s.notes)+labels(['p','crescendo →','f','♩ = 60']);
+ else if(s.kind==='articulation')body=scoreSVG(s.notes,{staccato:true})+labels(['staccato · •','legato · ⌒','fermata · 𝄐']);
+ else if(s.kind==='repeat')body=scoreSVG(s.notes,{repeat:true})+labels([t('repeatExample')]);
+ else if(s.kind==='endings')body=`<div class="ending-examples"><div><strong>${t('passOne')}</strong>${scoreSVG([60,62,64],{width:440})}</div><div><strong>${t('passTwo')}</strong>${scoreSVG([60,62,60],{width:440})}</div></div>`;
+ else if(s.kind==='twoHands')body=`<div class="grand-staff">${scoreSVG(s.notes.map(x=>x[0]))}${scoreSVG(s.notes.map(x=>x[1]),{clef:'bass'})}</div>`;
+ else if(s.kind==='heldBass')body=`<div class="grand-staff">${scoreSVG(s.notes,{time:'4'})}${scoreSVG([48],{time:'4',clef:'bass',durations:[4],alignFirst:true})}</div>`;
+ else if(s.kind==='piece')body=`<div class="mini-piece"><div><span>${t('barNumber',{n:1})} · ♩ = 60</span>${scoreSVG([60,62,64,67],{time:'4',width:460})}</div><div><span>${t('barNumber',{n:2})}</span>${scoreSVG([64,60],{durations:[2,2],width:460})}</div></div>`;
+ else body=scoreSVG(s.notes,opts)+(s.secondary?scoreSVG(s.secondary,{clef:s.clef||'treble'}):'');
+ return `<figure class="score-example reading-figure"><figcaption><strong>${t('visualExample')} · ${L(s.title)}</strong></figcaption>${body}</figure>`;
 }
 
 function renderLesson(focusPage=false){
-  const l=lessonData.find(x=>x.id===activeLesson);if(!l)return;
-  refreshPass();
-  const total=window.PHIM_QUIZZES[l.id].length,stage=lessonCompletedView?'complete':lessonFlow.stage;
-  const progress=stage==='complete'?100:stage==='read'?0:stage==='practice'?90:Math.round(10+80*(lessonFlow.index+(lessonFlow.feedback==='correct'?1:0))/total);
-  const step=stage==='read'?0:stage==='quiz'?1:2;
-  $('#lesson-content').innerHTML=`<header class="lesson-run-header"><div class="lesson-run-progress"><div class="lesson-run-meta"><span>${t('lesson')} ${pad(l.id)} / 12</span><span>${t(stage==='complete'?'completed':stage==='read'?'flowRead':stage==='quiz'?'flowQuiz':'flowPractice')}</span></div><div class="lesson-progress" role="progressbar" aria-label="${t('lessonProgress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div></div>${languagePicker()}</header><div class="lesson-stage-strip" aria-label="${t('lessonSteps')}">${['flowRead','flowQuiz','flowPractice'].map((key,i)=>`<span class="${i===step?'current':i<step?'done':''}" ${i===step?'aria-current="step"':''}>${i<step?'✓':i+1}. ${t(key)}</span>`).join('')}</div><div class="lesson-page" tabindex="-1">${lessonCompletedView?completionHTML(l.id):stage==='read'?readingPage(l):stage==='quiz'?quizPage(l):practiceLessonPage(l)}</div>${lessonCompletedView?'':`<footer class="lesson-run-footer">${lessonFooter(l)}</footer>`}`;
-  if(focusPage){$('.lesson-page').focus({preventScroll:true});$('.lesson-page').scrollTop=0;}
+ const l=lessonData.find(x=>x.id===activeLesson);if(!l)return;
+ refreshPass();const total=window.PHIM_QUIZZES[l.id].length,stage=lessonCompletedView?'complete':lessonFlow.stage;
+ const readTotal=window.PHIM_READINGS[l.id].length;
+ const progress=stage==='complete'?100:stage==='read'?Math.round(15*lessonFlow.readIndex/readTotal):stage==='practice'?(lessonFlow.practice.mode==='passed'?100:90):Math.round(20+65*(lessonFlow.index+(lessonFlow.feedback==='correct'?1:0))/total);
+ const step=stage==='read'?0:stage==='quiz'?1:2;
+ $('#lesson-content').innerHTML=`<header class="lesson-run-header"><div class="lesson-run-progress"><div class="lesson-run-meta"><span>${t('lesson')} ${pad(l.id)} / ${COURSE_TOTAL}</span><span data-save-status>${t(storageOK?'sessionSaved':'storageBlocked')}</span></div><div class="lesson-progress" role="progressbar" aria-label="${t('lessonProgress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div></div>${languagePicker()}</header><div class="lesson-stage-strip" aria-label="${t('lessonSteps')}">${['flowRead','flowQuiz','flowPractice'].map((key,i)=>`<span class="${i===step?'current':i<step?'done':''}" ${i===step?'aria-current="step"':''}>${i<step?'✓':i+1}. ${t(key)}</span>`).join('')}</div><div class="lesson-page" tabindex="-1">${lessonCompletedView?completionHTML(l.id):stage==='read'?readingPage(l):stage==='quiz'?quizPage(l):practiceLessonPage(l)}</div>${lessonCompletedView?'':`<footer class="lesson-run-footer">${lessonFooter(l)}</footer>`}`;
+ if(focusPage){$('.lesson-page').focus({preventScroll:true});$('.lesson-page').scrollTop=0;}
 }
 function openLesson(id){
-  if(!lessonData.some(x=>x.id===id))return;
-  if(!window.PHIM_LESSON_FLOW.canOpen(id,state.completed)){toast(t('lockedUntil',{n:id-1}));return;}
-  if($('#lesson-modal').hidden)returnFocus=document.activeElement;
-  cancelDemo();stopMetronome();activeLesson=id;passed=false;taskIndex=0;lessonFlow=window.PHIM_LESSON_FLOW.initial();lessonCompletedView=false;renderLesson();
-  $('#lesson-modal').hidden=false;document.body.style.overflow='hidden';$('.app-shell').inert=true;$('.sidebar').inert=true;$('.lesson-page').focus();
+ if(!lessonData.some(x=>x.id===id))return;
+ if(!FLOW.canOpen(id,state.completed,COURSE_TOTAL)){toast(t('lockedUntil',{n:id-1}));return;}
+ if(activeLesson)persistLesson();
+ if($('#lesson-modal').hidden)returnFocus=document.activeElement;
+ cancelDemo();stopMetronome();activeLesson=id;passed=false;lessonCompletedView=false;
+ lessonFlow=state.sessions[id]?.flow||FLOW.initial();
+ // A resumed assessment starts its current uninterrupted keyboard run afresh.
+ if(lessonFlow.stage==='practice'&&lessonFlow.practice.mode==='test')lessonFlow={...lessonFlow,practice:{...lessonFlow.practice,index:0,lastWrong:null}};
+ const target=lessonData.find(l=>l.id===id).target,min=Math.min(...target),max=Math.max(...target);
+ if(min<keyboardBase()||max>keyboardBase()+state.keyboardOctaves*12){state.keyboardStart=Math.max(1,Math.floor(min/12)-1);state.keyboardOctaves=Math.min(3,Math.max(1,Math.ceil((max-keyboardBase())/12)));}
+ persistLesson();renderLesson();
+ $('#lesson-modal').hidden=false;document.body.style.overflow='hidden';$('.app-shell').inert=true;$('.sidebar').inert=true;$('.lesson-page').focus();
 }
-function closeLesson(){cancelDemo();activeLesson=null;$('#lesson-modal').hidden=true;document.body.style.overflow='';$('.app-shell').inert=false;$('.sidebar').inert=false;if(returnFocus?.isConnected)returnFocus.focus();else $('#main').focus({preventScroll:true});}
-function beginLessonQuiz(){if(!activeLesson)return;cancelDemo();lessonFlow=window.PHIM_LESSON_FLOW.startQuiz(lessonFlow);taskIndex=0;renderLesson(true);}
+function closeLesson(){persistLesson();cancelDemo();activeLesson=null;$('#lesson-modal').hidden=true;document.body.style.overflow='';$('.app-shell').inert=false;$('.sidebar').inert=false;render();if(returnFocus?.isConnected)returnFocus.focus();else $('#main').focus({preventScroll:true});}
+function moveReading(index){
+ if(!activeLesson)return;const steps=window.PHIM_READINGS[activeLesson];
+ const next=FLOW.readStep(lessonFlow,index,steps.length);if(next===lessonFlow)return;
+ cancelDemo();lessonFlow=next;persistLesson();renderLesson(true);
+}
+function beginLessonQuiz(){
+ if(!activeLesson)return;cancelDemo();lessonFlow=FLOW.startQuiz(lessonFlow,window.PHIM_QUIZZES[activeLesson],window.PHIM_READINGS[activeLesson].length);persistLesson();renderLesson(true);
+}
 function chooseQuizAnswer(value){
-  if(!activeLesson||lessonFlow.stage!=='quiz')return;
-  const question=window.PHIM_QUIZZES[activeLesson][lessonFlow.index];
-  const next=window.PHIM_LESSON_FLOW.choose(lessonFlow,value,question);if(next===lessonFlow)return;
-  lessonFlow=next;renderLesson();$(`[data-choice="${value}"]`)?.focus({preventScroll:true});
+ if(!activeLesson||lessonFlow.stage!=='quiz')return;
+ const next=FLOW.choose(lessonFlow,value,currentQuestion());if(next===lessonFlow)return;
+ lessonFlow=next;persistLesson();renderLesson();$(`[data-choice="${value}"]`)?.focus({preventScroll:true});
 }
 function checkQuizAnswer(){
-  if(!activeLesson||lessonFlow.stage!=='quiz')return;
-  const question=window.PHIM_QUIZZES[activeLesson][lessonFlow.index];
-  const next=window.PHIM_LESSON_FLOW.check(lessonFlow,question);if(next===lessonFlow)return;
-  lessonFlow=next;renderLesson(lessonFlow.stage==='read');
-  if(lessonFlow.stage==='quiz')$('[data-advance-quiz]')?.focus({preventScroll:true});
+ if(!activeLesson||lessonFlow.stage!=='quiz')return;
+ const next=FLOW.check(lessonFlow,currentQuestion());if(next===lessonFlow)return;
+ lessonFlow=next;persistLesson();renderLesson(lessonFlow.stage==='read');
+ if(lessonFlow.stage==='quiz')$('[data-advance-quiz]')?.focus({preventScroll:true});
 }
-function advanceQuiz(){
-  if(!activeLesson)return;
-  lessonFlow=window.PHIM_LESSON_FLOW.advance(lessonFlow,window.PHIM_QUIZZES[activeLesson].length);renderLesson(true);
-}
-
+function advanceQuiz(){if(!activeLesson)return;lessonFlow=FLOW.advance(lessonFlow,window.PHIM_QUIZZES[activeLesson].length);persistLesson();renderLesson(true);}
 function completionHTML(id){
   const next=lessonData.find(l=>!state.completed.includes(l.id));
   return `<div class="completion-state"><div class="completion-icon">${icon('check')}</div><div class="lesson-topline">${t('understoodMore')}</div><h2 id="lesson-title">${t('congratulations')}</h2><p>${lessonData.find(l=>l.id===id).goals.join(' ')}</p><div class="reward-badge">${icon('check')} ${t('lessonBadge',{n:state.completed.length})}</div><a href="#song" class="button soft" data-close-route>${t('trySong')}</a>${next?`<button class="button" data-lesson="${next.id}">${t('nextLesson',{n:next.id})} ${icon('arrow')}</button>`:`<a href="#practice" class="button" data-close-route>${t('enterPractice')} ${icon('piano')}</a>`}<button class="button secondary" data-close>${t('backHome')}</button><div class="storage-note">${t(storageOK?'saved':'storageBlocked')}</div></div>`;
 }
 function completeLesson(){
   if(!passed||!activeLesson)return;
-  if(!state.completed.includes(activeLesson))state.completed.push(activeLesson);save();
+  if(!state.completed.includes(activeLesson))state.completed.push(activeLesson);delete state.sessions[activeLesson];save();
   lessonCompletedView=true;render();renderLesson();$('.lesson-dialog').focus();$('#lesson-modal').scrollTop=0;
 }
 function changeLanguage(language){
@@ -361,7 +439,15 @@ function changeLanguage(language){
 let toastTimer;
 function toast(text){$('#toast').textContent=text;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,4000);}
 document.addEventListener('click',event=>{
-  if(event.target.closest('[data-retry-task]')){taskIndex=0;renderLesson();return;}
+  if(event.target.closest('[data-retry-task]')){lessonFlow={...lessonFlow,practice:FLOW.initialPractice()};persistLesson();renderLesson();return;}
+  if(event.target.closest('[data-start-test]')){cancelDemo();const l=lessonData.find(l=>l.id===activeLesson);lessonFlow={...lessonFlow,practice:FLOW.startTest(lessonFlow.practice,l.target.length)};persistLesson();renderLesson(true);return;}
+  if(event.target.closest('[data-read-prev]')){moveReading(lessonFlow.readIndex-1);return;}
+  if(event.target.closest('[data-read-next]')){moveReading(lessonFlow.readIndex+1);return;}
+  const step=event.target.closest('[data-read-step]');if(step){moveReading(Number(step.dataset.readStep));return;}
+  if(event.target.closest('[data-reading-listen]')){listenReading().catch(()=>toast(t('audioError')));return;}
+  if(event.target.closest('[data-export-progress]')){exportProgress();return;}
+  if(event.target.closest('[data-confirm-import]')){confirmImport();return;}
+  if(event.target.closest('[data-cancel-import]')){pendingImport=null;render();return;}
   if(event.target.closest('[data-begin-quiz]')){beginLessonQuiz();return;}
   const choice=event.target.closest('[data-choice]');if(choice){chooseQuizAnswer(Number(choice.dataset.choice));return;}
   if(event.target.closest('[data-check-quiz]')){checkQuizAnswer();return;}
@@ -382,11 +468,12 @@ document.addEventListener('click',event=>{
 });
 const normalise=text=>text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
 document.addEventListener('input',event=>{
-  if(event.target.id==='volume')volume=Number(event.target.value)/100;
+  if(event.target.id==='volume'||event.target.matches('[data-volume]')){volume=Number(event.target.value)/100;state.volume=volume;save();}
   if(event.target.id==='tempo'){tempo=Number(event.target.value);$('#bpm-display').textContent=tempo;}
   if(event.target.id==='term-search'){const q=normalise(event.target.value.trim());$('#terms-grid').innerHTML=termCards(terms.filter(t=>normalise(t.name+' '+t.en+' '+t.text).includes(q)));}
 });
 document.addEventListener('change',event=>{
+  if(event.target.matches('[data-import-progress]')){readProgressFile(event.target.files[0]);return;}
   if(event.target.matches('[data-language]'))changeLanguage(event.target.value);
   if(event.target.matches('[data-octaves]')){state.keyboardOctaves=Number(event.target.value);state.keyboardStart=Math.min(state.keyboardStart,8-state.keyboardOctaves);updateKeyboard('[data-octaves]');}
   if(event.target.id==='show-labels'){state.showLabels=event.target.checked;save();$$('.key-name').forEach(el=>el.hidden=!state.showLabels);}
@@ -403,8 +490,8 @@ document.addEventListener('keydown',event=>{
 
 });
 window.addEventListener('hashchange',()=>{cancelDemo();songPractising=false;if(!$('#lesson-modal').hidden)closeLesson();render();window.scrollTo({top:0,behavior:'instant'});const lessonHash=location.hash.match(/^#lesson-(\d+)$/);if(lessonHash)openLesson(Number(lessonHash[1]));else $('#main').focus({preventScroll:true});});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMetronome();cancelDemo();save();}});
-window.addEventListener('pagehide',save);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMetronome();cancelDemo();persistLesson();}});
+window.addEventListener('pagehide',persistLesson);
 setInterval(()=>{if(!document.hidden&&route==='practice'&&$('#lesson-modal').hidden){state.practiceSeconds+=5;save();}},5000);
 render();
 const initialLessonHash=location.hash.match(/^#lesson-(\d+)$/);if(initialLessonHash)openLesson(Number(initialLessonHash[1]));
