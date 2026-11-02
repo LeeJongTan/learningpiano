@@ -37,7 +37,7 @@ const termsVI = [
 ];
 let lessonData, terms, routeTitles;
 function refreshLocale() {
-  lessonData = window.PHIM_COURSE.map(l => ({...l,...Object.fromEntries(['title','category','description','goals','theory','concept','question','reason','task'].map(k=>[k,L(l[k])])),question:L(window.PHIM_SHORT_ANSWERS[l.id].question),rubric:window.PHIM_SHORT_ANSWERS[l.id],duration:l.duration+' '+t('minutes'),color:['mint','sand','lilac'][(l.id-1)%3]}));
+  lessonData = window.PHIM_COURSE.map(l => ({...l,...Object.fromEntries(['title','category','description','goals','theory','concept','question','reason','task'].map(k=>[k,L(l[k])])),duration:l.duration+' '+t('minutes'),color:['mint','sand','lilac'][(l.id-1)%3]}));
   terms = state.language === 'en' ? window.PHIM_TERMS_EN : termsVI;
   routeTitles = Object.fromEntries(['home','learn','practice','song','library','feedback'].map(key => [key,t(key)]));
 }
@@ -49,7 +49,10 @@ function lessonArt(id) {
 }
 
 function lessonCards(wide = false, list = lessonData.slice(0,3)) {
-  return `<div class="lesson-grid ${wide ? 'wide-lessons' : ''}">${list.map(l => `<article class="lesson-card"><div class="lesson-art art-${l.color}"><span class="art-number">${pad(l.id)}</span>${lessonArt(l.id)}</div>${state.completed.includes(l.id) ? `<span class="done-badge" aria-label="${t('completed')}">${icon('check')}</span>` : ''}<div class="lesson-body"><div class="lesson-meta">${l.category} · ${t('lesson')} ${pad(l.id)}</div><h3><a href="#lesson-${l.id}" data-lesson="${l.id}">${l.title}</a></h3><p>${l.description}</p><div class="lesson-card-footer"><span class="lesson-duration">${icon('clock')}${l.duration}</span><button class="card-action" data-lesson="${l.id}" aria-label="${t('openLesson',{title:l.title})}">${icon(state.completed.includes(l.id) ? 'check' : 'arrow')}</button></div></div></article>`).join('')}</div>`;
+  return `<div class="lesson-grid ${wide ? 'wide-lessons' : ''}">${list.map(l => {
+    const unlocked=window.PHIM_LESSON_FLOW.canOpen(l.id,state.completed),done=state.completed.includes(l.id);
+    return `<article class="lesson-card ${unlocked?'':'lesson-locked'}"><div class="lesson-art art-${l.color}"><span class="art-number">${pad(l.id)}</span>${lessonArt(l.id)}</div>${done?`<span class="done-badge" aria-label="${t('completed')}">${icon('check')}</span>`:''}<div class="lesson-body"><div class="lesson-meta">${l.category} · ${t('lesson')} ${pad(l.id)}</div><h3>${unlocked?`<a href="#lesson-${l.id}" data-lesson="${l.id}">${l.title}</a>`:l.title}</h3><p>${l.description}</p>${unlocked?'':`<p class="lesson-lock">${icon('lock')} ${t('lockedUntil',{n:l.id-1})}</p>`}<div class="lesson-card-footer"><span class="lesson-duration">${icon('clock')}${l.duration}</span><button class="card-action" data-lesson="${l.id}" ${unlocked?'':'disabled'} aria-label="${unlocked?t('openLesson',{title:l.title}):t('lockedUntil',{n:l.id-1})}">${icon(unlocked?(done?'check':'arrow'):'lock')}</button></div></div></article>`;
+  }).join('')}</div>`;
 }
 function nextLesson() { return lessonData.find(l => !state.completed.includes(l.id))?.id || 1; }
 function homePage() {
@@ -230,14 +233,29 @@ function clickTone(at,accent=false){
 }
 function stopMetronome(){metroRunning=false;metroGeneration++;clearTimeout(metroTimer);$$('.beat-dot').forEach(d=>d.classList.remove('on'));if($('#metro-toggle'))$('#metro-toggle').innerHTML=`${icon('play')} ${t('startMetro')}`;}
 let activeLesson=null,passed=false,returnFocus=null;
-
-let taskIndex=0, quizPassed=false;
-function lessonBody(id){
-  const l=lessonData.find(x=>x.id===id);
-  return `<div class="learning-goal"><div><strong>${t('afterLesson')}</strong><ul>${l.goals.map(g=>`<li>${g}</li>`).join('')}</ul></div></div><section class="lesson-section"><h3>01. ${t('understand')}</h3>${l.theory.map(p=>`<p>${p}</p>`).join('')}<div class="concept-box">${l.concept}</div>${scoreFigure(l)}</section>${shortAnswerHTML(l)}<section class="lesson-section"><h3>03. ${t('apply')}</h3><p>${l.task}</p><button class="button soft" data-sound="course-${id}">${icon('volume')} ${t('listenExample')}</button><div class="task-track" aria-live="polite"><span data-task-count>${taskIndex}/${l.target.length}</span><strong data-task-next>${taskIndex>=l.target.length?t('taskDone'):t('nextNote',{note:noteName(l.target[taskIndex])})}</strong><button class="text-button" data-retry-task>${t('retryTask')}</button></div>${liveNote()}${keyboard()}<p class="storage-note">${t('practiceCheckLimit')}</p></section>`;
+let taskIndex=0, lessonFlow=window.PHIM_LESSON_FLOW.initial(), lessonCompletedView=false;
+function readingPage(l){
+  return `<div class="lesson-reading"><div class="lesson-topline">${t('flowRead')}</div><h2 id="lesson-title">${l.title}</h2><p class="lesson-lead">${l.description}</p>${lessonFlow.reviewRequired?`<div class="review-notice" role="status"><strong>${t('reviewTitle')}</strong><p>${t('reviewMessage')}</p></div>`:''}<div class="learning-goal"><div><strong>${t('afterLesson')}</strong><ul>${l.goals.map(g=>`<li>${g}</li>`).join('')}</ul></div></div><section class="lesson-section"><h3>${t('understand')}</h3>${l.theory.map(p=>`<p>${p}</p>`).join('')}<div class="concept-box">${l.concept}</div>${scoreFigure(l)}<button class="button soft reading-listen" data-sound="course-${l.id}">${icon('volume')} ${t('listenExample')}</button></section></div>`;
 }
-function refreshPass(){passed=quizPassed&&taskIndex>=lessonData.find(l=>l.id===activeLesson).target.length;const b=$('#complete-lesson');if(b)b.disabled=!passed;}
+function quizPage(l){
+  const questions=window.PHIM_QUIZZES[l.id],q=questions[lessonFlow.index],answered=!!lessonFlow.feedback;
+  return `<section class="quiz-page"><div class="quiz-meta"><span>${t('quizQuestion',{n:lessonFlow.index+1,total:questions.length})}</span><span>${t('quizMistakes',{n:lessonFlow.mistakes})}</span></div><h2 id="lesson-title">${L(q.question)}</h2><p class="quiz-instruction">${t('quizSelect')}</p><div class="quiz-options" role="group" aria-labelledby="lesson-title">${L(q.options).map((option,i)=>`<button type="button" class="quiz-option ${lessonFlow.choice===i?'selected':''} ${answered&&lessonFlow.choice===i?lessonFlow.feedback:''}" data-choice="${i}" aria-pressed="${lessonFlow.choice===i}" ${answered?'disabled':''}><span class="choice-letter">${String.fromCharCode(65+i)}</span><span>${option}</span>${answered&&lessonFlow.choice===i?icon(lessonFlow.feedback==='correct'?'check':'close'):''}</button>`).join('')}</div><div class="quiz-feedback ${lessonFlow.feedback||''}" role="status" aria-live="polite" aria-atomic="true">${lessonFlow.feedback==='correct'?`<strong>${t('quizCorrect')}</strong><p>${L(q.explanation)}</p>`:lessonFlow.feedback==='wrong'?`<strong>${t('quizWrong')}</strong><p>${t('quizWrongHelp',{n:4-lessonFlow.mistakes})}</p>`:''}</div><p class="quiz-policy">${t('quizPolicy')}</p></section>`;
+}
+function practiceLessonPage(l){
+  return `<section class="lesson-practice"><div class="lesson-topline">${t('flowPractice')}</div><h2 id="lesson-title">${t('practiceAfterQuiz')}</h2><p class="lesson-lead">${l.task}</p><button class="button soft" data-sound="course-${l.id}">${icon('volume')} ${t('listenExample')}</button><div class="task-track" aria-live="polite"><span data-task-count>${taskIndex}/${l.target.length}</span><strong data-task-next>${taskIndex>=l.target.length?t('taskDone'):t('nextNote',{note:noteName(l.target[taskIndex])})}</strong><button class="text-button" data-retry-task>${t('retryTask')}</button></div>${liveNote()}${keyboard()}<p class="storage-note">${t('practiceCheckLimit')}</p></section>`;
+}
+function lessonFooter(l){
+  if(lessonFlow.stage==='read')return `<p>${t('readBeforeQuiz',{n:window.PHIM_QUIZZES[l.id].length})}</p><button class="button" data-begin-quiz>${t(lessonFlow.reviewRequired?'restartQuiz':'beginQuiz')} ${icon('arrow')}</button>`;
+  if(lessonFlow.stage==='quiz')return `<p>${t('quizFooter')}</p>${!lessonFlow.feedback?`<button class="button" data-check-quiz ${lessonFlow.choice===null?'disabled':''}>${t('checkChoice')} ${icon('check')}</button>`:`<button class="button" data-advance-quiz>${t(lessonFlow.feedback==='wrong'?'retryQuestion':lessonFlow.index===window.PHIM_QUIZZES[l.id].length-1?'quizToPractice':'quizNext')} ${icon('arrow')}</button>`}`;
+  return `<p>${t('practiceFinishHint')}</p><button class="button" id="complete-lesson" ${passed?'':'disabled'}>${t('finish')} ${icon('check')}</button>`;
+}
+function refreshPass(){
+  const l=lessonData.find(l=>l.id===activeLesson);
+  passed=!!l&&lessonFlow.stage==='practice'&&taskIndex>=l.target.length;
+  const b=$('#complete-lesson');if(b)b.disabled=!passed;
+}
 function advanceTask(midi){
+  if(lessonFlow.stage!=='practice')return;
   const l=lessonData.find(l=>l.id===activeLesson);if(taskIndex>=l.target.length)return;
   if(midi===l.target[taskIndex]){taskIndex++;$('[data-task-count]').textContent=`${taskIndex}/${l.target.length}`;$('[data-task-next]').textContent=taskIndex===l.target.length?t('taskDone'):t('nextNote',{note:noteName(l.target[taskIndex])});}
   else $('[data-task-next]').textContent=t('noteHint',{played:noteName(midi),note:noteName(l.target[taskIndex])});
@@ -287,50 +305,45 @@ function scoreFigure(l){
   return `<figure class="score-example"><figcaption><strong>${t('visualExample')} · ${l.title}</strong><span>${l.concept}</span></figcaption>${body}</figure>`;
 }
 
-let answerState=window.PHIM_ANSWER_CHECK.initial(), lessonCompletedView=false;
-function renderLesson(){
-  const id=activeLesson,l=lessonData.find(x=>x.id===id);if(!l)return;
-  if(lessonCompletedView){$('#lesson-content').innerHTML=completionHTML(id);return;}
-  $('#lesson-content').innerHTML=`${languagePicker()}<div class="lesson-topline">${t('courseTitle').toUpperCase()} · ${t('lesson')} ${pad(id)} / 12 · ${l.duration.toUpperCase()}</div><h2 id="lesson-title">${l.title}</h2><p class="lesson-lead">${l.description}</p>${lessonBody(id)}<div class="lesson-finish"><p>${t('finishHint')}</p><button class="button" id="complete-lesson" ${passed?'':'disabled'}>${t('finish')} ${icon('check')}</button></div>`;
+function renderLesson(focusPage=false){
+  const l=lessonData.find(x=>x.id===activeLesson);if(!l)return;
   refreshPass();
+  const total=window.PHIM_QUIZZES[l.id].length,stage=lessonCompletedView?'complete':lessonFlow.stage;
+  const progress=stage==='complete'?100:stage==='read'?0:stage==='practice'?90:Math.round(10+80*(lessonFlow.index+(lessonFlow.feedback==='correct'?1:0))/total);
+  const step=stage==='read'?0:stage==='quiz'?1:2;
+  $('#lesson-content').innerHTML=`<header class="lesson-run-header"><div class="lesson-run-progress"><div class="lesson-run-meta"><span>${t('lesson')} ${pad(l.id)} / 12</span><span>${t(stage==='complete'?'completed':stage==='read'?'flowRead':stage==='quiz'?'flowQuiz':'flowPractice')}</span></div><div class="lesson-progress" role="progressbar" aria-label="${t('lessonProgress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div></div>${languagePicker()}</header><div class="lesson-stage-strip" aria-label="${t('lessonSteps')}">${['flowRead','flowQuiz','flowPractice'].map((key,i)=>`<span class="${i===step?'current':i<step?'done':''}" ${i===step?'aria-current="step"':''}>${i<step?'✓':i+1}. ${t(key)}</span>`).join('')}</div><div class="lesson-page" tabindex="-1">${lessonCompletedView?completionHTML(l.id):stage==='read'?readingPage(l):stage==='quiz'?quizPage(l):practiceLessonPage(l)}</div>${lessonCompletedView?'':`<footer class="lesson-run-footer">${lessonFooter(l)}</footer>`}`;
+  if(focusPage){$('.lesson-page').focus({preventScroll:true});$('.lesson-page').scrollTop=0;}
 }
 function openLesson(id){
   if(!lessonData.some(x=>x.id===id))return;
+  if(!window.PHIM_LESSON_FLOW.canOpen(id,state.completed)){toast(t('lockedUntil',{n:id-1}));return;}
   if($('#lesson-modal').hidden)returnFocus=document.activeElement;
-  cancelDemo();stopMetronome();activeLesson=id;passed=false;quizPassed=false;taskIndex=0;answerState=window.PHIM_ANSWER_CHECK.initial();lessonCompletedView=false;renderLesson();
-  $('#lesson-modal').hidden=false;document.body.style.overflow='hidden';$('.app-shell').inert=true;$('.sidebar').inert=true;$('.lesson-dialog').focus();$('#lesson-modal').scrollTop=0;
+  cancelDemo();stopMetronome();activeLesson=id;passed=false;taskIndex=0;lessonFlow=window.PHIM_LESSON_FLOW.initial();lessonCompletedView=false;renderLesson();
+  $('#lesson-modal').hidden=false;document.body.style.overflow='hidden';$('.app-shell').inert=true;$('.sidebar').inert=true;$('.lesson-page').focus();
 }
 function closeLesson(){cancelDemo();activeLesson=null;$('#lesson-modal').hidden=true;document.body.style.overflow='';$('.app-shell').inert=false;$('.sidebar').inert=false;if(returnFocus?.isConnected)returnFocus.focus();else $('#main').focus({preventScroll:true});}
-function escapeHTML(value) { return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
-function answerFeedbackHTML(l) {
-  let feedback='';
-  if(answerState.correct) feedback=`<p class="answer-success">${icon('check')} ${t('answerCorrect')}</p><p>${L(l.rubric.model)}</p><p>${l.reason}</p>`;
-  else if(answerState.attempts) {
-    feedback=`<p class="answer-encouragement">${t(answerState.attempts===1?'answerEncourage':answerState.attempts===2?'answerHintIntro':'answerRevealIntro')}</p>`;
-    if(answerState.attempts>=2)feedback+=`<div class="answer-hint"><strong>${t('answerHintTitle')}</strong><p>${L(l.rubric.hint)}</p></div>`;
-    if(answerState.attempts>=3)feedback+=`<div class="answer-model"><strong>${t('answerModelTitle')}</strong><p>${L(l.rubric.model)}</p><p>${l.reason}</p><small>${t('answerRetryAfterReveal')}</small></div>`;
-  }
-  if(answerState.notice)feedback+=`<p class="answer-notice">${t(answerState.notice)}</p>`;
-  return feedback;
+function beginLessonQuiz(){if(!activeLesson)return;cancelDemo();lessonFlow=window.PHIM_LESSON_FLOW.startQuiz(lessonFlow);taskIndex=0;renderLesson(true);}
+function chooseQuizAnswer(value){
+  if(!activeLesson||lessonFlow.stage!=='quiz')return;
+  const question=window.PHIM_QUIZZES[activeLesson][lessonFlow.index];
+  const next=window.PHIM_LESSON_FLOW.choose(lessonFlow,value,question);if(next===lessonFlow)return;
+  lessonFlow=next;renderLesson();$(`[data-choice="${value}"]`)?.focus({preventScroll:true});
 }
-function shortAnswerHTML(l) {
-  return `<section class="exercise short-answer-exercise"><span class="exercise-tag">02. ${t('checkUnderstanding')}</span><h3 id="answer-question">${l.question}</h3><form id="short-answer-form"><label class="answer-label" for="lesson-answer">${t('answerLabel')}</label><p class="answer-instructions" id="answer-instructions">${t('answerInstructions')}</p><textarea id="lesson-answer" name="answer" rows="3" maxlength="1200" aria-labelledby="answer-question answer-label-text" aria-describedby="answer-instructions answer-policy" ${answerState.correct?'readonly':''}>${escapeHTML(answerState.text)}</textarea><span id="answer-label-text" class="sr-only">${t('answerLabel')}</span><div class="answer-submit-row"><button type="submit" class="button" ${answerState.correct?'disabled':''}>${icon('check')} ${t(answerState.correct?'answerPassed':'answerSubmit')}</button><span class="answer-attempts">${t('answerAttempts',{n:Math.min(answerState.attempts,3)})}</span></div><p class="answer-policy" id="answer-policy">${t('answerPolicy')}</p></form><div class="exercise-feedback ${answerState.correct?'success':''}" id="exercise-feedback" role="status" aria-live="polite" aria-atomic="true">${answerFeedbackHTML(l)}</div></section>`;
+function checkQuizAnswer(){
+  if(!activeLesson||lessonFlow.stage!=='quiz')return;
+  const question=window.PHIM_QUIZZES[activeLesson][lessonFlow.index];
+  const next=window.PHIM_LESSON_FLOW.check(lessonFlow,question);if(next===lessonFlow)return;
+  lessonFlow=next;renderLesson(lessonFlow.stage==='read');
+  if(lessonFlow.stage==='quiz')$('[data-advance-quiz]')?.focus({preventScroll:true});
 }
-function submitShortAnswer() {
+function advanceQuiz(){
   if(!activeLesson)return;
-  const l=lessonData.find(l=>l.id===activeLesson),input=$('#lesson-answer');
-  if(!input||answerState.correct)return;
-  answerState=window.PHIM_ANSWER_CHECK.submit(answerState,input.value,l.rubric);
-  quizPassed=answerState.correct;refreshPass();
-  $('#exercise-feedback').innerHTML=answerFeedbackHTML(l);
-  $('#exercise-feedback').classList.toggle('success',quizPassed);
-  $('.answer-attempts').textContent=t('answerAttempts',{n:Math.min(answerState.attempts,3)});
-  if(quizPassed){input.readOnly=true;const button=$('#short-answer-form button');button.disabled=true;button.innerHTML=`${icon('check')} ${t('answerPassed')}`;}
+  lessonFlow=window.PHIM_LESSON_FLOW.advance(lessonFlow,window.PHIM_QUIZZES[activeLesson].length);renderLesson(true);
 }
 
 function completionHTML(id){
   const next=lessonData.find(l=>!state.completed.includes(l.id));
-  return `${languagePicker()}<div class="completion-state"><div class="completion-icon">${icon('check')}</div><div class="lesson-topline">${t('understoodMore')}</div><h2 id="lesson-title">${t('congratulations')}</h2><p>${lessonData.find(l=>l.id===id).goals.join(' ')}</p><div class="reward-badge">${icon('check')} ${t('lessonBadge',{n:state.completed.length})}</div><a href="#song" class="button soft" data-close-route>${t('trySong')}</a>${next?`<button class="button" data-lesson="${next.id}">${t('nextLesson',{n:next.id})} ${icon('arrow')}</button>`:`<a href="#practice" class="button" data-close-route>${t('enterPractice')} ${icon('piano')}</a>`}<button class="button secondary" data-close>${t('backHome')}</button><div class="storage-note">${t(storageOK?'saved':'storageBlocked')}</div></div>`;
+  return `<div class="completion-state"><div class="completion-icon">${icon('check')}</div><div class="lesson-topline">${t('understoodMore')}</div><h2 id="lesson-title">${t('congratulations')}</h2><p>${lessonData.find(l=>l.id===id).goals.join(' ')}</p><div class="reward-badge">${icon('check')} ${t('lessonBadge',{n:state.completed.length})}</div><a href="#song" class="button soft" data-close-route>${t('trySong')}</a>${next?`<button class="button" data-lesson="${next.id}">${t('nextLesson',{n:next.id})} ${icon('arrow')}</button>`:`<a href="#practice" class="button" data-close-route>${t('enterPractice')} ${icon('piano')}</a>`}<button class="button secondary" data-close>${t('backHome')}</button><div class="storage-note">${t(storageOK?'saved':'storageBlocked')}</div></div>`;
 }
 function completeLesson(){
   if(!passed||!activeLesson)return;
@@ -339,9 +352,9 @@ function completeLesson(){
 }
 function changeLanguage(language){
   if(!['vi','en'].includes(language)||language===state.language)return;
-  const scroll=$('#lesson-modal').scrollTop;
+  const scroll=$('.lesson-page')?.scrollTop||0;
   state.language=language;songPractising=false;save();cancelDemo();render();
-  if(activeLesson){renderLesson();$('#lesson-modal').scrollTop=scroll;$('[data-language]',$('#lesson-modal'))?.focus({preventScroll:true});}
+  if(activeLesson){renderLesson();$('.lesson-page').scrollTop=scroll;$('[data-language]',$('#lesson-modal'))?.focus({preventScroll:true});}
   else $('[data-language]',$('.topbar')).focus({preventScroll:true});
 }
 
@@ -349,6 +362,10 @@ let toastTimer;
 function toast(text){$('#toast').textContent=text;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,4000);}
 document.addEventListener('click',event=>{
   if(event.target.closest('[data-retry-task]')){taskIndex=0;renderLesson();return;}
+  if(event.target.closest('[data-begin-quiz]')){beginLessonQuiz();return;}
+  const choice=event.target.closest('[data-choice]');if(choice){chooseQuizAnswer(Number(choice.dataset.choice));return;}
+  if(event.target.closest('[data-check-quiz]')){checkQuizAnswer();return;}
+  if(event.target.closest('[data-advance-quiz]')){advanceQuiz();return;}
   const phrase=event.target.closest('[data-phrase]');if(phrase){songPhrase=Number(phrase.dataset.phrase);songIndex=0;songPractising=false;cancelDemo();render();return;}
   if(event.target.closest('[data-song-listen]')){listenSong();return;}
   if(event.target.closest('[data-song-practice]')){cancelDemo();songIndex=0;songPractising=true;updateSongUI();return;}
@@ -357,7 +374,6 @@ document.addEventListener('click',event=>{
   const lesson=event.target.closest('[data-lesson]');if(lesson){event.preventDefault();openLesson(Number(lesson.dataset.lesson));return;}
   if(event.target.closest('.close-modal,[data-close]')){closeLesson();return;}
   if(event.target.closest('[data-close-route]')){closeLesson();return;}
-  if(event.target===$('#lesson-modal')){closeLesson();return;}
   const sound=event.target.closest('[data-sound]');if(sound){playSound(sound.dataset.sound).catch(()=>toast(t('audioError')));return;}
   const key=event.target.closest('[data-midi]');if(key){playKey(Number(key.dataset.midi)).catch(()=>toast(t('audioError')));return;}
   if(event.target.closest('#complete-lesson')){completeLesson();return;}
@@ -365,9 +381,7 @@ document.addEventListener('click',event=>{
   if(event.target.closest('#rhythm-demo')){ensureAudio().then(ctx=>{if(!ctx)return;for(let i=0;i<4;i++)clickTone(ctx.currentTime+.05+i,i===0);}).catch(()=>toast('Chưa mở được âm thanh. Hãy thử lại.'));}
 });
 const normalise=text=>text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
-document.addEventListener('submit',event=>{if(event.target.id==='short-answer-form'){event.preventDefault();submitShortAnswer();}});
 document.addEventListener('input',event=>{
-  if(event.target.id==='lesson-answer')answerState.text=event.target.value;
   if(event.target.id==='volume')volume=Number(event.target.value)/100;
   if(event.target.id==='tempo'){tempo=Number(event.target.value);$('#bpm-display').textContent=tempo;}
   if(event.target.id==='term-search'){const q=normalise(event.target.value.trim());$('#terms-grid').innerHTML=termCards(terms.filter(t=>normalise(t.name+' '+t.en+' '+t.text).includes(q)));}
@@ -382,16 +396,15 @@ document.addEventListener('keydown',event=>{
   if(event.key==='Escape'&&modalOpen){closeLesson();return;}
   if(event.key==='Tab'&&modalOpen){const controls=$$('button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex=\"0\"]',$('.lesson-dialog')).filter(el=>el.getClientRects().length);const first=controls[0],last=controls.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===$('.lesson-dialog'))){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}return;}
   if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;
-  if((modalOpen&&lessonCompletedView)||(!modalOpen&&!['practice','song'].includes(route)))return;
+  if((modalOpen&&(lessonCompletedView||lessonFlow.stage!=='practice'))||(!modalOpen&&!['practice','song'].includes(route)))return;
   const offset=pianoCodes.indexOf(event.code);
   const midi=offset<0||offset>state.keyboardOctaves*12?null:keyboardBase()+offset;
   if(midi!==null){event.preventDefault();playKey(midi).catch(()=>toast(t('audioError')));}
 
 });
-window.addEventListener('hashchange',()=>{cancelDemo();songPractising=false;if(!$('#lesson-modal').hidden)closeLesson();render();window.scrollTo({top:0,behavior:'instant'});$('#main').focus({preventScroll:true});});
+window.addEventListener('hashchange',()=>{cancelDemo();songPractising=false;if(!$('#lesson-modal').hidden)closeLesson();render();window.scrollTo({top:0,behavior:'instant'});const lessonHash=location.hash.match(/^#lesson-(\d+)$/);if(lessonHash)openLesson(Number(lessonHash[1]));else $('#main').focus({preventScroll:true});});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMetronome();cancelDemo();save();}});
 window.addEventListener('pagehide',save);
 setInterval(()=>{if(!document.hidden&&route==='practice'&&$('#lesson-modal').hidden){state.practiceSeconds+=5;save();}},5000);
 render();
-
-
+const initialLessonHash=location.hash.match(/^#lesson-(\d+)$/);if(initialLessonHash)openLesson(Number(initialLessonHash[1]));

@@ -41,25 +41,28 @@ Tiến độ, sao, ngôn ngữ và cài đặt bàn phím được lưu trong lo
 Bản cloud phiên bản 6, source commit `1e03a8d84a8d8e1806daa03f7b48c08c92bf1e92`. Sáu file website được giữ nguyên nội dung và chuyển từ `dist/` ra thư mục gốc để phục vụ trực tiếp trên GitHub Pages. Các lần sửa trong GitHub và Sites cần được đồng bộ chủ động.
 
 
-## Câu hỏi tự luận và giao diện
+## Luồng học toàn màn hình
 
-Mỗi bài có ô trả lời ngắn thay cho trắc nghiệm. `short-answers.js` chứa câu hỏi,
-nhóm từ khóa tương đương, gợi ý, đáp án mẫu và bộ kiểm tra. Mỗi nhóm ý phải có
-ít nhất một từ/cụm từ khớp; dấu tiếng Việt, chữ hoa/thường và một số cách ghi nốt
-được chuẩn hóa. Đây là kiểm tra theo từ khóa, không phải chấm ngữ nghĩa bằng AI.
+Mỗi bài đi theo 3 trang: đọc hiểu → kiểm tra → thực hành. Bài sau chỉ mở khi
+mọi bài trước đã hoàn thành. Tiến độ bài hoàn thành cũ được giữ nguyên trên cùng
+trình duyệt; trạng thái đang học đặt lại khi đóng bài hoặc tải lại trang.
 
-Sai lần 1 nhận động viên; lần 2 thêm gợi ý; lần 3 hiện đáp án mẫu. Xem đáp án
-không tự hoàn thành bài. Người học có thể trả lời lại không giới hạn; phải trả lời
-đúng và chơi đúng chuỗi nốt để ghi nhận bài học. Gửi ô trống hoặc lặp nguyên một
-đáp án không dùng thêm lượt. Bản nháp và số lượt được giữ khi đổi ngôn ngữ trong
-bài đang mở, và được đặt lại khi mở lại bài. Không gửi câu trả lời tới máy chủ.
+`quiz-bank.js` chứa 72 câu song ngữ (6 câu cho mỗi bài), mỗi câu 4 lựa chọn và
+một đáp án đúng. Vị trí lựa chọn được xoay ổn định, giữ nguyên khi đổi ngôn ngữ.
+`lesson-flow.js` quản lý thứ tự trang, lựa chọn, kiểm tra, số lần sai và khóa bài.
 
-Logo chủ website cung cấp nằm ở `assets/piano-logo.png`; ảnh lớn đã được gỡ khỏi phần giới thiệu. Bảng màu: `#FFA883`,
-`#FDE3C8`, `#FAF2E8`, `#6FC7E1`; chữ dùng sắc đậm để giữ độ tương phản.
+Người học phải trả lời đúng cả 6 câu rồi hoàn thành chuỗi phím đàn. Sai tối đa
+3 lần trong một lượt kiểm tra; lần sai thứ 4 quay lại trang đọc hiểu. Sau khi ôn,
+nhấn bắt đầu kiểm tra để làm lại cả 6 câu với bộ đếm sai mới. Không tự chuyển
+trang sau khi chọn: nhấn Kiểm tra, xem phản hồi, rồi nhấn Tiếp tục hoặc Thử lại.
 
-Chạy kiểm tra bộ chấm bằng Node.js:
+Không dùng chấm tự luận hoặc gửi câu trả lời tới máy chủ. Tiến độ hoàn thành
+lưu trong localStorage, không phải hệ thống xác thực chống gian lận.
+
+Logo: `assets/piano-logo.png`. Bảng màu: `#FFA883`, `#FDE3C8`, `#FAF2E8`, `#6FC7E1`.
+
+Kiểm tra:
 
 ```sh
-node --test tests/short-answers.test.cjs
+node --test tests/lesson-flow.test.cjs
 ```
-
