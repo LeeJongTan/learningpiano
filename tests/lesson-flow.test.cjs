@@ -116,16 +116,39 @@ test('notation places E-flat on the E position; dotted and tied notes are visual
  const source=fs.readFileSync(require.resolve('../app.js'),'utf8'),a=source.indexOf('function scoreSVG('),b=source.indexOf('function readingFigure(',a);
  const sandbox={t:(k,v={})=>k+JSON.stringify(v),escapeHTML:x=>x};vm.createContext(sandbox);vm.runInContext(source.slice(a,b),sandbox);
  const flat=sandbox.scoreSVG([63],{spelling:['E♭4']}),natural=sandbox.scoreSVG([64]);
- assert.match(flat,/<ellipse cx="310" cy="96"/);assert.match(natural,/<ellipse cx="310" cy="96"/);
+ assert.match(flat,/<ellipse cx="160" cy="96"/);assert.match(natural,/<ellipse cx="160" cy="96"/);
  assert.match(sandbox.scoreSVG([60],{durations:[3]}),/class="score-dot"/);
  assert.match(sandbox.scoreSVG([60,60],{tie:true}),/Q/);
 });
 
 test('all 41 reading figures render without exceptions, including multi-note flat chord spellings',()=>{
- const source=fs.readFileSync(require.resolve('../app.js'),'utf8'),a=source.indexOf('function scoreSVG('),b=source.indexOf('function renderLesson(',a);
- const sandbox={t:(k,v={})=>k+JSON.stringify(v),escapeHTML:x=>x,L:x=>Array.isArray(x)?x[0]:x};vm.createContext(sandbox);vm.runInContext(source.slice(a,b),sandbox);
- let count=0;for(const steps of Object.values(readings))for(const step of steps){const html=sandbox.readingFigure(step);assert.match(html,/<figure/);assert.ok(!html.includes('NaN'));count++;}
- assert.equal(count,41);
+ const source=fs.readFileSync(require.resolve('../app.js'),'utf8'),a=source.indexOf('function readingEvents('),b=source.indexOf('function renderLesson(',a);
+ for(const lang of [0,1]){
+  const sandbox={t:(k,v={})=>ctx.window.PHIM_TEXT[k][lang].replace(/\{(\w+)\}/g,(_,name)=>v[name]??''),escapeHTML:x=>x,L:x=>x[lang]};
+  vm.createContext(sandbox);vm.runInContext(source.slice(a,b),sandbox);
+  let count=0;
+  for(const steps of Object.values(readings))for(const step of steps){
+   const html=sandbox.readingFigure(step);
+   assert.match(html,/<figure/);assert.doesNotMatch(html,/NaN|undefined|𝄞|𝄢|𝄐/u);count++;
+   const events=sandbox.readingEvents(step);
+   assert.ok(events.length>0&&events.every(([note,onset,length])=>Number.isInteger(note)&&Number.isFinite(onset)&&onset>=0&&length>0));
+  }
+  assert.equal(count,41);
+ }
+});
+
+test('reading examples show beat groupings and play silence and sustained notes as taught',()=>{
+ const source=fs.readFileSync(require.resolve('../app.js'),'utf8'),a=source.indexOf('function readingEvents('),b=source.indexOf('function renderLesson(',a);
+ const sandbox={t:k=>k,escapeHTML:x=>x,L:x=>x[0]};vm.createContext(sandbox);vm.runInContext(source.slice(a,b),sandbox);
+ const show=step=>sandbox.readingFigure(step),events=step=>JSON.parse(JSON.stringify(sandbox.readingEvents(step)));
+ assert.equal((show(readings[14][0]).match(/class="score-beam"/g)||[]).length,2);
+ assert.equal((show(readings[14][1]).match(/class="score-beam"/g)||[]).length,5);
+ assert.match(show(readings[15][1]),/class="score-flat">♮/);
+ assert.equal((show(readings[20][0]).match(/class="score-bar"/g)||[]).length,2);
+ assert.deepEqual(events(readings[6][1]),[[60,0,1,1],[60,2,1,1]]);
+ assert.deepEqual(events(readings[13][1]),[[60,0,2,1]]);
+ assert.deepEqual(events(readings[19][1])[0],[48,0,4,.65]);
+ assert.deepEqual(events(readings[20][0]).map(e=>e.slice(1,3)),[[0,1],[1,1],[2,1],[3,1],[4,2],[6,2]]);
 });
 
 test('duration and rest figures render labeled SVG symbols in both languages',()=>{

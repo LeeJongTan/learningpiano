@@ -187,13 +187,12 @@ function termCards(list) { return list.length ? list.map(term=>`<article class="
 function languagePicker() { return `<label class="language-picker lesson-language"><span>${t('language')}</span><select data-language aria-label="${t('language')}"><option value="vi" lang="vi" ${state.language==='vi'?'selected':''}>Tiếng Việt</option><option value="en" lang="en" ${state.language==='en'?'selected':''}>English</option></select></label>`; }
 function renderShell() {
   document.documentElement.lang=state.language;
-  const content={'.brand-caption':'tagline','.nav-label':'space','.sidebar-note p':'sideStory','.sidebar-note>span:last-child':'curiosityStart','.sidebar-bottom strong':'newcomer','.sidebar-bottom div>span':'beginning','.footer .muted':'footer','.skip-link':'skip'};
+  const content={'.brand-caption':'tagline','.nav-label':'space','.sidebar-note p':'sideStory','.sidebar-note>span:last-child':'curiosityStart','.sidebar-bottom strong':'newcomer','.sidebar-bottom div>span':'beginning','.skip-link':'skip'};
   for(const [selector,key] of Object.entries(content))$(selector).innerHTML=t(key);
   $$('.brand,.header-logo').forEach(el=>el.setAttribute('aria-label',t('brandHome')));$('.main-nav').setAttribute('aria-label',t('nav'));$('.close-modal').setAttribute('aria-label',t('close'));
   $$('.nav-link').forEach(a=>$('span',a).textContent=t(a.dataset.route));
   $('.nav-count').textContent=COURSE_TOTAL;$('.sidebar-bottom strong').textContent=state.profile.displayName||t('newcomer');
   $$('[data-copy]').forEach(el=>el.textContent=t(el.dataset.copy));
-  $$('.footer>span')[1].innerHTML=`${t('madeWith')} <span class="orange">✦</span>`;
   $$('[data-language]').forEach(el=>{el.value=state.language;el.setAttribute('aria-label',t('language'));});
 }
 let route = 'home';
@@ -252,7 +251,7 @@ async function playSound(kind) {
   const ctx=await ensureAudio();if(!ctx)return;
   cancelDemo();const generation=soundGeneration;const start=ctx.currentTime+.025;
   let events=[];
-  if(kind.startsWith('course-')) events=lessonData.find(l=>l.id===Number(kind.slice(7))).demo.map((notes,i)=>[i*.8,notes]);
+  if(kind.startsWith('course-')) events=lessonData.find(l=>l.id===Number(kind.slice(7))).target.map((note,i)=>[i*.8,[note],.65]);
   if(kind==='major')events=[[0,[60,64,67]]];
   if(kind==='minor')events=[[0,[60,63,67]]];
   if(kind==='compare')events=[[0,[60,64,67]],[1.7,[60,63,67]]];
@@ -260,8 +259,8 @@ async function playSound(kind) {
   if(kind==='semitone')events=[[0,[64]],[.75,[65]]];
   if(kind==='scale')events=[60,62,64,65,67,69,71,72].map((n,i)=>[i*.32,[n]]);
   if(route==='practice'&&!activeLesson){const transpose=keyboardBase()-60;events=events.map(([delay,notes])=>[delay,notes.map(n=>n+transpose)]);}
-  for(const [delay,notes] of events){
-    for(const n of notes)tone(n,start+delay,1.4,notes.length>1?.65:1);
+  for(const [delay,notes,duration=1.4] of events){
+    for(const n of notes)tone(n,start+delay,duration,notes.length>1?.65:1);
     setTimeout(()=>{if(generation!==soundGeneration)return;notes.forEach(flash);showNote(notes[0]);},delay*1000+25);
   }
   const explanations={major:t('majorExplanation'),minor:t('minorExplanation'),scale:t('scaleExplanation')};
@@ -343,22 +342,47 @@ function advanceTask(midi){
 }
 async function listenReading(){
  const lesson=activeLesson,step=window.PHIM_READINGS[lesson][lessonFlow.readIndex];
- const ctx=await ensureAudio();if(!ctx||lesson!==activeLesson||lessonFlow.stage!=='read')return;
- cancelDemo();const start=ctx.currentTime+.03;let at=0;
- const emit=(notes,duration=1,strength=1)=>{(Array.isArray(notes)?notes:[notes]).forEach(n=>tone(n,start+at,Math.max(.15,duration*.7),Array.isArray(notes)?.55*strength:strength));at+=duration*(step.kind==='piece'?1:.75);};
+ const generation=soundGeneration,ctx=await ensureAudio();
+ if(!ctx||generation!==soundGeneration||lesson!==activeLesson||lessonFlow.stage!=='read')return;
+ cancelDemo();const start=ctx.currentTime+.03;
+ for(const [note,offset,length,strength] of readingEvents(step))tone(note,start+offset,length,strength);
+}
+function readingEvents(step){
+ const events=[];let at=0;
+ const emit=(notes,length=1,strength=1,sustain=length)=>{
+  const pitches=Array.isArray(notes)?notes:[notes];
+  pitches.forEach(note=>events.push([note,at,sustain,pitches.length>1?.55*strength:strength]));
+  at+=length;
+ };
  if(['compound','meterCompare'].includes(step.kind)){
-   for(const group of step.kind==='compound'?[3]:[2,3])for(let i=0;i<6;i++)emit(step.notes[i],.5,i%group===0?1:.45);
+   for(const group of step.kind==='compound'?[3]:[2,3]){
+    if(at)at+=1;
+    step.notes.forEach((note,i)=>emit(note,.5,i%group===0?1:.45));
+   }
+ }else if(step.kind==='meter'){
+  step.notes.forEach((note,i)=>emit(note,1,i===0?1:.55));
+  at+=1;
+  step.notes.slice(0,3).forEach((note,i)=>emit(note,1,i===0?1:.55));
  }else if(step.kind==='repeat'){for(let pass=0;pass<2;pass++)step.notes.forEach(n=>emit(n));}
  else if(step.kind==='tie')emit(step.notes[0],2);
  else if(step.kind==='values')step.notes.forEach((n,i)=>emit(n,[4,2,1,.5][i]));
+ else if(step.kind==='rests'){emit(step.notes[0]);at+=1;emit(step.notes[1]);}
  else if(step.kind==='dynamics')step.notes.forEach((n,i)=>emit(n,1,[.25,.45,.7,1][i]));
- else if(step.kind==='articulation')step.notes.forEach((n,i)=>{tone(n,start+i*.8,i===2?1.6:.2,.8);});
- else if(step.kind==='heldBass'){tone(48,start,3,.65);step.notes.forEach(n=>emit(n));}
+ else if(step.kind==='articulation')step.notes.forEach((n,i)=>emit(n,1,.8,[.25,1,2][i]));
+ else if(step.kind==='endings')step.notes.forEach((n,i)=>emit(n,i%3===2?2:1));
+ else if(step.kind==='fKey'){
+  step.notes.forEach(n=>emit(n));
+  at+=1;
+  fNaturalExample.notes.forEach((n,i)=>emit(n,fNaturalExample.durations[i]));
+ }
+ else if(step.kind==='heldBass'){events.push([48,0,4,.65]);step.notes.forEach(n=>emit(n));}
  else step.notes.forEach((n,i)=>emit(n,step.kind==='piece'?(i<4?1:2):(step.durations?.[i]||1)));
+ return events;
 }
+const fNaturalExample={notes:[70,71,71,70],durations:[2,1,1,4]};
 // Original, semantic SVG notation. Spellings determine vertical positions, so
 // E-flat is placed on E's line/space rather than D's.
-function scoreSVG(notes,{clef='treble',labels=true,width=620,time='',denominator='4',durations=[],harmony=false,spelling=[],key='',repeat=false,tie=false,alignFirst=false,staccato=false}={}){
+function scoreSVG(notes,{clef='treble',labels=true,width=Math.max(320,130+notes.length*50),time='',denominator='4',durations=[],harmony=false,spelling=[],key='',repeat=false,tie=false,alignFirst=false,articulation=false,beamSize=0,barlines=[]}={}){
  const names=['C','C♯','D','E♭','E','F','F♯','G','G♯','A','B♭','B'];
  const letters={C:0,D:1,E:2,F:3,G:4,A:5,B:6};
  const parse=(m,label)=>{
@@ -366,14 +390,19 @@ function scoreSVG(notes,{clef='treble',labels=true,width=620,time='',denominator
    return {text,letter:match[1],acc:match[2],d:7*Number(match[3])+letters[match[1]]};
  };
  const bottom=clef==='bass'?7*2+letters.G:7*4+letters.E;
- const left=time||key||repeat?122:85,step=(width-left-45)/Math.max(notes.length-1,1);
- const xAt=i=>notes.length===1&&!alignFirst?width/2:left+i*step;
+ const timeX=key?103:86,left=time&&key?146:time||key||repeat?122:85;
+ const onsets=notes.map((_,i)=>durations.slice(0,i).reduce((sum,n)=>sum+n,0)+Math.max(0,i-durations.length));
+ const step=(width-left-45)/Math.max(onsets[notes.length-1],1);
+ const xAt=i=>notes.length===1&&!alignFirst?width/2:left+onsets[i]*step;
+ const yAt=(m,label)=>96-6*(parse(m,label).d-bottom);
  const lines=[48,60,72,84,96].map(y=>`<line x1="25" x2="${width-12}" y1="${y}" y2="${y}"/>`).join('');
  const keyDefault=letter=>key==='G'&&letter==='F'?'♯':key==='F'&&letter==='B'?'♭':'';
  const seen=new Map(),descriptions=[];
- const ys=notes.flatMap((group,i)=>(Array.isArray(group)?group:[group]).map((m,j)=>96-6*(parse(m,Array.isArray(spelling[i])?spelling[i][j]:spelling[i]).d-bottom)));
+ const ys=notes.flatMap((group,i)=>(Array.isArray(group)?group:[group]).map((m,j)=>yAt(m,Array.isArray(spelling[i])?spelling[i][j]:spelling[i])));
  const labelY=Math.max(151,...ys.map(y=>y+35)),height=Math.max(176,labelY+25);
+ const beamTop=i=>Math.min(...ys.slice(i,i+beamSize))-32;
  const heads=notes.map((group,i)=>{
+  if(barlines.includes(i))seen.clear();
   group=Array.isArray(group)?group:[group];const x=xAt(i);
   const groupYs=group.map((m,j)=>96-6*(parse(m,Array.isArray(spelling[i])?spelling[i][j]:spelling[i]).d-bottom));
   return group.map((m,j)=>{
@@ -383,17 +412,28 @@ function scoreSVG(notes,{clef='treble',labels=true,width=620,time='',denominator
    const desired=n.acc==='♮'?'':n.acc,previous=seen.has(d)?seen.get(d):keyDefault(n.letter);
    const sign=desired===previous?'':desired||'♮';seen.set(d,desired);
    const duration=durations[i]??1,dotted=duration===3||duration===1.5,base=dotted?duration/1.5:duration;
-   const down=harmony?groupYs.reduce((a,b)=>a+b,0)/groupYs.length<72:y<72,stemX=x+(down?-7:7),stemY=harmony?(down?Math.max(...groupYs)+34:Math.min(...groupYs)-34):y+(down?34:-34);
-   descriptions.push(n.text+' · '+duration+' '+t('beatUnit',{n:duration}));
-   return `${ledger}${sign?`<text x="${x-23}" y="${y+4}" class="score-flat">${sign}</text>`:''}<ellipse cx="${x}" cy="${y}" rx="7.5" ry="5" transform="rotate(-18 ${x} ${y})" class="score-note" style="${base>=2?'fill:#fffdf9':''}"/>${base<4?`<path class="score-stem" d="M${stemX} ${y}V${stemY}"/>`:''}${base===.5?`<path class="score-stem" fill="none" d="M${stemX} ${stemY}q${down?'-14 -4 -7 -18':'14 4 7 18'}"/>`:''}${dotted?`<circle class="score-dot" cx="${x+16}" cy="${y-(d%2===0?5:0)}" r="2.5"/>`:''}${staccato?`<circle class="score-dot" cx="${x}" cy="${y+(down?-13:13)}" r="2.5"/>`:''}${labels?`<text x="${x}" y="${harmony?y+4:labelY}" text-anchor="${harmony?'start':'middle'}" dx="${harmony?16:0}" class="score-under">${n.text}</text>`:''}`;
+   const down=!beamSize&&(harmony?groupYs.reduce((a,b)=>a+b,0)/groupYs.length<72:y<72),stemX=x+(down?-7:7);
+   const stemY=beamSize?beamTop(i-i%beamSize):harmony?(down?Math.max(...groupYs)+34:Math.min(...groupYs)-34):y+(down?34:-34);
+   descriptions.push(n.text+' · '+duration+' '+t('scoreQuarterUnit',{n:duration}));
+   return `${ledger}${sign?`<text x="${x-23}" y="${y+6}" class="score-flat">${sign}</text>`:''}<ellipse cx="${x}" cy="${y}" rx="7.5" ry="5" transform="rotate(-18 ${x} ${y})" class="score-note" style="${base>=2?'fill:#fffdf9':''}"/>${base<4?`<path class="score-stem" d="M${stemX} ${y}V${stemY}"/>`:''}${base===.5&&!beamSize?`<path class="score-stem" fill="none" d="M${stemX} ${stemY}q${down?'-14 -4 -7 -18':'14 4 7 18'}"/>`:''}${dotted?`<circle class="score-dot" cx="${x+16}" cy="${y-(d%2===0?5:0)}" r="2.5"/>`:''}${articulation&&i===0?`<circle class="score-dot" cx="${x}" cy="${y+13}" r="2.5"/>`:''}${labels?`<text x="${x}" y="${harmony?y+4:labelY}" text-anchor="${harmony?'start':'middle'}" dx="${harmony?16:0}" class="score-under">${n.text}</text>`:''}`;
   }).join('');
  }).join('');
- const keyGlyph=key?`<text class="score-flat" x="78" y="${key==='G'?(clef==='bass'?64:52):(clef==='bass'?88:76)}">${key==='G'?'♯':'♭'}</text>`:'';
+ const keyGlyph=key?`<text class="score-flat" x="78" y="${key==='G'?(clef==='bass'?66:54):(clef==='bass'?90:78)}">${key==='G'?'♯':'♭'}</text>`:'';
+ const clefShape=clef==='bass'
+  ? '<path d="M31 83C43 75 52 66 49 56 47 48 34 47 30 55c-2 4 0 8 4 8s6-4 4-6c-2-2-5-1-6 1 0-5 5-8 9-6 7 4 2 20-10 31Z"/><circle cx="57" cy="54" r="2.5"/><circle cx="57" cy="66" r="2.5"/>'
+  : '<path d="M43 89c-7-3-5-12 2-14 8-2 15 3 14 10-1 10-13 13-22 7-10-6-8-19 0-28 6-7 16-13 16-23 0-6-2-11-4-12-8 8-9 20-7 33l8 40c2 9-7 14-13 9-2-2-2-5-1-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="38" cy="104" r="4"/>';
+ const beams=beamSize?Array.from({length:notes.length/beamSize},(_,g)=>{
+  const first=g*beamSize;
+  return `<path class="score-beam" d="M${xAt(first)+7} ${beamTop(first)}H${xAt(first+beamSize-1)+7}" stroke="currentColor" stroke-width="5"/>`;
+ }).join(''):'';
+ const barLine=x=>`<line class="score-bar" x1="${x}" x2="${x}" y1="48" y2="96"/>`;
+ const bars=barlines.map(i=>barLine((xAt(i-1)+xAt(i))/2)).join('')+(time?barLine(width-15):'');
  const repeats=repeat?`<path d="M92 48v48m5-48v48M${width-21} 48v48m6-48v48" class="score-stem"/><g class="score-dot"><circle cx="105" cy="66" r="2.5"/><circle cx="105" cy="78" r="2.5"/><circle cx="${width-29}" cy="66" r="2.5"/><circle cx="${width-29}" cy="78" r="2.5"/></g>`:'';
  const tieY=notes.length?96-6*(parse(Array.isArray(notes[0])?notes[0][0]:notes[0],Array.isArray(spelling[0])?spelling[0][0]:spelling[0]).d-bottom)+13:110;
  const tied=tie?`<path d="M${xAt(0)+6} ${tieY}Q${(xAt(0)+xAt(1))/2} ${tieY+21} ${xAt(1)-6} ${tieY}" fill="none" stroke="currentColor" stroke-width="2"/>`:'';
+ const marks=articulation?`<path d="M${xAt(1)} ${ys[1]+11}Q${(xAt(1)+xAt(2))/2} ${ys[1]+28} ${xAt(2)} ${ys[2]+11} M${xAt(2)-10} 44q10-20 20 0" fill="none" stroke="currentColor" stroke-width="2"/><circle class="score-dot" cx="${xAt(2)}" cy="42" r="2"/>`:'';
  const alt=t('scoreDescription',{clef:t(clef==='bass'?'bassClef':'trebleClef'),notes:descriptions.join('; ')});
- return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHTML(alt)}"><title>${escapeHTML(alt)}</title><g class="score-staff">${lines}<text x="25" y="${clef==='bass'?83:91}" class="score-clef">${clef==='bass'?'𝄢':'𝄞'}</text>${keyGlyph}${time?`<text x="86" y="70" class="score-time">${time}</text><text x="86" y="91" class="score-time">${denominator}</text>`:''}${heads}${tied}${repeats}${time?`<line class="score-bar" x1="${width-15}" x2="${width-15}" y1="48" y2="96"/>`:''}</g></svg>`;
+ return `<svg viewBox="0 0 ${width} ${height}" role="img" ${notes.length>6?'style="min-width:360px"':''} aria-label="${escapeHTML(alt)}"><title>${escapeHTML(alt)}</title><g class="score-staff">${lines}<g class="score-clef">${clefShape}</g>${keyGlyph}${time?`<text x="${timeX}" y="70" class="score-time">${time}</text><text x="${timeX}" y="91" class="score-time">${denominator}</text>`:''}${heads}${beams}${tied}${marks}${repeats}${bars}</g></svg>`;
 }
 function rhythmValues(){
  const values=[
@@ -426,17 +466,21 @@ function readingFigure(s){
  else if(s.kind==='keyboard')body=`<div class="letter-keys">${['C','D','E','F','G','A','B','C'].map(x=>`<span>${x}</span>`).join('')}</div>`;
  else if(['values','rests'].includes(s.kind))body=`${rhythmValues()}<p>${t('restLegend')}</p>`;
  else if(s.kind==='grand')body=`<div class="grand-staff">${scoreSVG([60])}${scoreSVG([60],{clef:'bass'})}</div>${labels([t('sameMiddleC')])}`;
- else if(s.kind==='meter')body=scoreSVG([60,62,64,65],{time:'4'})+scoreSVG([60,62,64],{time:'3'});
+ else if(s.kind==='meter')body=scoreSVG(s.notes,{time:'4'})+scoreSVG(s.notes.slice(0,3),{time:'3'});
  else if(s.kind==='tie')body=scoreSVG([60,60],{tie:true})+labels([t('tieExample')]);
- else if(['compound','meterCompare'].includes(s.kind))body=scoreSVG(s.notes,{...opts,time:s.kind==='compound'?'6':'3',denominator:s.kind==='compound'?'8':'4'})+`<div class="beat-groups">${(s.kind==='compound'?['1 la li','2 la li']:['1 &','2 &','3 &']).map(x=>`<strong>${x}</strong>`).join('')}</div>`;
- else if(s.kind==='gKey'||s.kind==='fKey')body=scoreSVG(s.notes,{...opts,key:s.kind==='gKey'?'G':'F'});
- else if(s.kind==='dynamics')body=scoreSVG(s.notes)+labels(['p','crescendo →','f','♩ = 60']);
- else if(s.kind==='articulation')body=scoreSVG(s.notes,{staccato:true})+labels(['staccato · •','legato · ⌒','fermata · 𝄐']);
+ else if(['compound','meterCompare'].includes(s.kind)){
+  const compound=scoreSVG(s.notes,{...opts,time:'6',denominator:'8',beamSize:3})+labels(['1 la li','2 la li']);
+  body=s.kind==='compound'?compound:scoreSVG(s.notes,{...opts,time:'3',beamSize:2})+labels(['1 &amp;','2 &amp;','3 &amp;'])+compound;
+ }
+ else if(s.kind==='gKey')body=scoreSVG(s.notes,{...opts,key:'G'});
+ else if(s.kind==='fKey')body=scoreSVG(s.notes,{...opts,key:'F'})+scoreSVG(fNaturalExample.notes,{...fNaturalExample,key:'F',time:'4',barlines:[3]});
+ else if(s.kind==='dynamics')body=scoreSVG(s.notes)+labels(['p','crescendo →','f',L(['60 nốt đen/phút','60 quarter notes/min'])]);
+ else if(s.kind==='articulation')body=scoreSVG(s.notes,{articulation:true})+labels(['staccato','legato','fermata']);
  else if(s.kind==='repeat')body=scoreSVG(s.notes,{repeat:true})+labels([t('repeatExample')]);
- else if(s.kind==='endings')body=`<div class="ending-examples"><div><strong>${t('passOne')}</strong>${scoreSVG([60,62,64],{width:440})}</div><div><strong>${t('passTwo')}</strong>${scoreSVG([60,62,60],{width:440})}</div></div>`;
- else if(s.kind==='twoHands')body=`<div class="grand-staff">${scoreSVG(s.notes.map(x=>x[0]))}${scoreSVG(s.notes.map(x=>x[1]),{clef:'bass'})}</div>`;
- else if(s.kind==='heldBass')body=`<div class="grand-staff">${scoreSVG(s.notes,{time:'4'})}${scoreSVG([48],{time:'4',clef:'bass',durations:[4],alignFirst:true})}</div>`;
- else if(s.kind==='piece')body=`<div class="mini-piece"><div><span>${t('barNumber',{n:1})} · ♩ = 60</span>${scoreSVG([60,62,64,67],{time:'4',width:460})}</div><div><span>${t('barNumber',{n:2})}</span>${scoreSVG([64,60],{durations:[2,2],width:460})}</div></div>`;
+ else if(s.kind==='endings')body=`<div class="ending-examples">${['passOne','passTwo'].map((pass,i)=>`<div><strong>${t(pass)}</strong>${scoreSVG(s.notes.slice(i*3,i*3+3),{width:440,time:'2',durations:[1,1,2],barlines:[2]})}</div>`).join('')}</div>`;
+ else if(s.kind==='twoHands')body=`<div class="grand-staff">${scoreSVG(s.notes.map(x=>x[0]),{time:'3'})}${scoreSVG(s.notes.map(x=>x[1]),{clef:'bass',time:'3'})}</div>`;
+ else if(s.kind==='heldBass')body=`<div class="grand-staff">${scoreSVG(s.notes,{time:'4',width:360})}${scoreSVG([48],{time:'4',clef:'bass',width:360,durations:[4],alignFirst:true})}</div>`;
+ else if(s.kind==='piece')body=`<p>${L(['Tempo · 60 nốt đen/phút','Tempo · 60 quarter notes/min'])}</p>${scoreSVG(s.notes,{time:'4',durations:[1,1,1,1,2,2],barlines:[4]})}`;
  else body=scoreSVG(s.notes,opts)+(s.secondary?scoreSVG(s.secondary,{clef:s.clef||'treble'}):'');
  return `<figure class="score-example reading-figure"><figcaption><strong>${t('visualExample')} · ${L(s.title)}</strong></figcaption>${body}</figure>`;
 }

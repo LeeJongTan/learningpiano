@@ -251,8 +251,8 @@ window.PHIM_READINGS = {
         "Rests and tempo"
       ],
       "body": [
-        "Dấu lặng cũng chiếm thời gian: lặng đen bằng một nốt đen. Hai móc đơn bằng một nốt đen. Ở 60 BPM mỗi phách dài 1 giây; 120 BPM dài ½ giây. Tỉ lệ trường độ không đổi theo tempo.",
-        "A rest takes time without sound: a quarter rest lasts as long as a quarter note. Two eighths equal one quarter. At 60 BPM a beat lasts 1 second; at 120 it lasts ½ second. Note-value ratios stay unchanged."
+        "Dấu lặng cũng chiếm thời gian: lặng đen bằng một nốt đen. Hai móc đơn bằng một nốt đen. Ở 60 BPM mỗi phách dài 1 giây; 120 BPM dài ½ giây. Tỉ lệ trường độ không đổi theo tempo. Trong bản nghe, giữa hai nốt đen C4 có một phách im.",
+        "A rest takes time without sound: a quarter rest lasts as long as a quarter note. Two eighths equal one quarter. At 60 BPM a beat lasts 1 second; at 120 it lasts ½ second. Note-value ratios stay unchanged. In the audio, listen for one silent beat between the two C4 quarter notes."
       ],
       "remember": [
         "Lặng vẫn phải đếm; tempo đổi số giây, không đổi tỉ lệ nốt.",
@@ -261,10 +261,6 @@ window.PHIM_READINGS = {
       "notes": [
         60,
         60
-      ],
-      "durations": [
-        2,
-        1
       ],
       "kind": "rests"
     }
