@@ -128,6 +128,21 @@ test('all 41 reading figures render without exceptions, including multi-note fla
  assert.equal(count,41);
 });
 
+test('duration and rest figures render labeled SVG symbols in both languages',()=>{
+ const source=fs.readFileSync(require.resolve('../app.js'),'utf8'),a=source.indexOf('function rhythmValues('),b=source.indexOf('function renderLesson(',a);
+ for(const [lang,note,rest,unit] of [[0,'Nốt tròn','Dấu lặng tròn','phách'],[1,'Whole note','Whole rest','beats']]){
+  const sandbox={t:k=>k,escapeHTML:x=>x,L:x=>x[lang]};vm.createContext(sandbox);vm.runInContext(source.slice(a,b),sandbox);
+  for(const step of readings[6]){
+   const html=sandbox.readingFigure(step);
+   assert.equal((html.match(/<svg /g)||[]).length,8);
+   assert.ok(html.includes(`aria-label="${note}"`));
+   assert.ok(html.includes(`aria-label="${rest}"`));
+   assert.ok(html.includes(`<span>4 ${unit}</span>`));
+   assert.doesNotMatch(html,/[𝅝𝅗𝅥𝄻𝄼𝄽𝄾♩♪]/u);
+  }
+ }
+});
+
 test('full access opens valid lessons without unlocking them for standard learners', () => {
   const completed = [1];
   assert.equal(flow.canOpen(20, completed, 20, true), true);
