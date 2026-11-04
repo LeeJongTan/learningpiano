@@ -151,3 +151,46 @@ button,input,select,textarea{font-family:inherit}
 }
 
 @media(max-width:720px){.topbar{position:sticky;top:0;background:var(--paper)}}
+
+.account-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+  gap: 28px;
+  align-items: start;
+  max-width: 1030px;
+  margin: 18px auto;
+}
+.account-intro {
+  padding: clamp(22px, 4vw, 48px);
+  background: var(--peach);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.account-intro img { object-fit: contain; margin-bottom: 20px; }
+.account-intro h1 { font-size: clamp(30px, 4vw, 54px); margin: 12px 0; }
+.account-intro > p:not(.eyebrow) { color: var(--muted); margin-bottom: 24px; }
+.account-card { padding: clamp(22px, 4vw, 38px); }
+.account-card h2 { font-size: 24px; }
+.account-card form { margin: 20px 0; align-items: stretch; }
+.account-card input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  font-size: 16px;
+}
+.account-password { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.account-submit { width: 100%; min-height: 44px; margin-top: 6px; }
+.account-links, .account-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.account-links button, .account-card > .text-button { min-height: 44px; text-align: left; }
+.account-email { overflow-wrap: anywhere; }
+.account-sync { padding: 12px; border-radius: 8px; background: var(--green-pale); }
+#account-message:empty { display: none; }
+@media(max-width: 860px) {
+  .account-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .account-intro img { width: 32px; height: 46px; margin-bottom: 10px; }
+}
