@@ -196,7 +196,9 @@ function renderShell() {
 let route = 'home';
 function render() {
   stopMetronome();refreshLocale();renderShell();
-  route = Object.hasOwn(routeTitles, location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  const requestedRoute = location.hash.slice(1);
+  const defaultRoute = !requestedRoute && !learnerAccountId ? 'account' : 'home';
+  route = Object.hasOwn(routeTitles, requestedRoute) ? requestedRoute : defaultRoute;
   $('#main').innerHTML = ({home:homePage,learn:learnPage,practice:practicePage,song:songPage,library:libraryPage,feedback:feedbackPage,profile:profilePage,account:pianoAccount.page})[route]();
   $('#breadcrumb').textContent = routeTitles[route];
   $$('.nav-link').forEach(a => { a.classList.toggle('active',a.dataset.route === route); if(a.dataset.route===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current'); });
