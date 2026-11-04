@@ -68,3 +68,16 @@ On phones, the Learning space button opens a vertical menu with readable labels 
 The Practice room includes the requested iPhone/iPad ringer reminder. The homepage hero contains the owner-supplied English quotation, Vietnamese translation and Beethoven credit.
 
 Run all checks with `node --test tests/*.test.cjs` (23 test groups). Browser QA covers desktop, 390×844 and 320×360 layouts, menu navigation/scrolling, sound-note UI feedback, and a clean keyboard assessment without duplicate note input. Multi-finger event handling and interrupted audio recovery are tested in Node; physical iPhone/Safari multi-touch and actual audio output still require device testing.
+
+## Accounts and completed lesson sync
+
+The account page at `#account` uses Supabase Auth with email and password and a pinned browser SDK. The public configuration contains only the project URL and publishable key. Supabase stores completed lesson IDs with per-user row-level access. Guest progress can be merged explicitly from the account page. Local data is kept separately per account and guest mode.
+
+The SQL in `supabase/piano-progress.sql` defines the deployed schema. If the course grows beyond 20 lessons, extend its lesson ID constraint before publishing new lessons.
+
+For email confirmation and password recovery, configure Auth > URL Configuration on the Supabase dashboard. Set the Site URL to `https://leejongtan.github.io/learningpiano/` and add both exact redirect URLs below.
+
+- `https://leejongtan.github.io/learningpiano/?account=confirm`
+- `https://leejongtan.github.io/learningpiano/?account=reset`
+
+Use custom SMTP for emails to learners outside the Supabase project team. Keep SMTP credentials in Supabase settings. Keep email confirmation enabled. The confirmation and reset links use PKCE and should be opened in the same browser that requested them.

@@ -10,8 +10,44 @@ function t(key,values={}){
   const pair=window.PHIM_TEXT[key];if(!pair)throw new Error('Missing translation: '+key);
   return pair[state.language==='en'?1:0].replace(/\{(\w+)\}/g,(_,name)=>values[name]??'').replaceAll('(s)',Number(values.n)===1?'':'s');
 }
-try{const saved=localStorage.getItem(STORAGE_KEY);if(saved)state=LEARNER.sanitise(JSON.parse(saved),window.PHIM_COURSE,window.PHIM_QUIZZES,window.PHIM_READINGS,FLOW);}catch(error){if(error.name!=='SyntaxError')storageOK=false;}
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));storageOK=true;}catch{storageOK=false;}updateSaveStatus();}
+let learnerAccountId = null;
+function readLearner(key) {
+  try {
+    return LEARNER.sanitise(JSON.parse(localStorage.getItem(key)), window.PHIM_COURSE,
+      window.PHIM_QUIZZES, window.PHIM_READINGS, FLOW);
+  } catch (error) {
+    if (error.name !== 'SyntaxError') storageOK = false;
+    return LEARNER.defaults();
+  }
+}
+state = readLearner(STORAGE_KEY);
+function save(sync = true) {
+  const key = learnerAccountId ? STORAGE_KEY + ':' + learnerAccountId : STORAGE_KEY;
+  try { localStorage.setItem(key, JSON.stringify(state)); storageOK = true; }
+  catch { storageOK = false; }
+  updateSaveStatus();
+  if (sync && learnerAccountId) void pianoAccount.sync();
+}
+function switchLearner(id) {
+  if (id === learnerAccountId) return;
+  if (activeLesson) closeLesson();
+  const language = state.language;
+  learnerAccountId = id;
+  state = readLearner(id ? STORAGE_KEY + ':' + id : STORAGE_KEY);
+  state.language = language;
+  volume = state.volume;
+  pendingImport = null;
+  cancelDemo();
+  songPractising = false;
+  render();
+}
+function mergeAccountProgress(ids) {
+  const completed = [...new Set([...state.completed, ...ids])];
+  if (completed.length === state.completed.length) return;
+  state.completed = completed;
+  save(false);
+  if (!activeLesson && ['home', 'learn', 'profile'].includes(route)) render();
+}
 const escapeHTML=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function updateSaveStatus(){$$('[data-save-status]').forEach(el=>el.textContent=t(storageOK?'sessionSaved':'storageBlocked'));}
 const L = value => Array.isArray(value) ? value[state.language === 'en' ? 1 : 0] : value;
@@ -30,7 +66,7 @@ let lessonData, terms, routeTitles;
 function refreshLocale() {
   lessonData = window.PHIM_COURSE.map(l => ({...l,...Object.fromEntries(['title','category','description','goals','theory','concept','question','reason','task'].map(k=>[k,L(l[k])])),duration:l.duration+' '+t('minutes'),color:['mint','sand','lilac'][(l.id-1)%3]}));
   terms = state.language === 'en' ? window.PHIM_TERMS_EN : termsVI;
-  routeTitles = Object.fromEntries(['home','learn','practice','song','library','feedback','profile'].map(key => [key,t(key)]));
+  routeTitles = Object.fromEntries(['home','learn','practice','song','library','feedback','profile','account'].map(key => [key,t(key)]));
 }
 refreshLocale();
 function lessonArt(id) {
@@ -124,7 +160,7 @@ function resumeSummary(){
 }
 let pendingImport=null;
 function profilePage(){
- return `<div class="page-intro"><div class="eyebrow">${t('yourSpace')}</div><h1>${t('profileTitle')}</h1><p>${t('profileIntro')}</p></div><div class="profile-grid"><section class="profile-card"><h2>${t('learnerName')}</h2><form id="profile-form"><label for="display-name">${t('optionalName')}</label><input id="display-name" name="displayName" type="text" maxlength="40" autocomplete="nickname" value="${escapeHTML(state.profile.displayName)}" placeholder="${t('namePlaceholder')}"><button class="button" type="submit">${t('saveProfile')}</button><p id="profile-status" role="status"></p></form><div class="profile-stats"><strong>${state.completed.length}/${COURSE_TOTAL}</strong><span>${t('profileLessons')}</span></div><p class="storage-note" data-save-status>${t(storageOK?'sessionSaved':'storageBlocked')}</p><p class="storage-note">${t('profilePrivacy')}</p></section><section class="profile-card"><h2>${t('backupTitle')}</h2><p>${t('backupHelp')}</p><button class="button soft" data-export-progress>${t('exportProgress')}</button><label class="import-label" for="progress-file">${t('importProgress')}</label><input id="progress-file" type="file" accept="application/json,.json" data-import-progress><p id="import-status" role="status"></p>${pendingImport?`<div class="import-preview"><strong>${t('importPreview')}</strong><p>${t('importSummary',{name:escapeHTML(pendingImport.profile.displayName)||t('newcomer'),n:pendingImport.completed.length})}</p><p>${t('importReplaces')}</p><button class="button" data-confirm-import>${t('confirmImport')}</button><button class="button secondary" data-cancel-import>${t('cancelImport')}</button></div>`:''}<p class="storage-note">${t('backupWarning')}</p></section></div>`;
+ return `<div class="page-intro"><div class="eyebrow">${t('yourSpace')}</div><h1>${t('profileTitle')}</h1><p>${t('profileIntro')}</p><a class="section-link" href="#account">${t('account')} ${icon('arrow')}</a></div><div class="profile-grid"><section class="profile-card"><h2>${t('learnerName')}</h2><form id="profile-form"><label for="display-name">${t('optionalName')}</label><input id="display-name" name="displayName" type="text" maxlength="40" autocomplete="nickname" value="${escapeHTML(state.profile.displayName)}" placeholder="${t('namePlaceholder')}"><button class="button" type="submit">${t('saveProfile')}</button><p id="profile-status" role="status"></p></form><div class="profile-stats"><strong>${state.completed.length}/${COURSE_TOTAL}</strong><span>${t('profileLessons')}</span></div><p class="storage-note" data-save-status>${t(storageOK?'sessionSaved':'storageBlocked')}</p><p class="storage-note">${t('profilePrivacy')}</p></section><section class="profile-card"><h2>${t('backupTitle')}</h2><p>${t('backupHelp')}</p><button class="button soft" data-export-progress>${t('exportProgress')}</button><label class="import-label" for="progress-file">${t('importProgress')}</label><input id="progress-file" type="file" accept="application/json,.json" data-import-progress><p id="import-status" role="status"></p>${pendingImport?`<div class="import-preview"><strong>${t('importPreview')}</strong><p>${t('importSummary',{name:escapeHTML(pendingImport.profile.displayName)||t('newcomer'),n:pendingImport.completed.length})}</p><p>${t('importReplaces')}</p><button class="button" data-confirm-import>${t('confirmImport')}</button><button class="button secondary" data-cancel-import>${t('cancelImport')}</button></div>`:''}<p class="storage-note">${t('backupWarning')}</p></section></div>`;
 }
 function exportProgress(){
  persistLesson();const blob=new Blob([JSON.stringify(LEARNER.backup(state),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -161,7 +197,7 @@ let route = 'home';
 function render() {
   stopMetronome();refreshLocale();renderShell();
   route = Object.hasOwn(routeTitles, location.hash.slice(1)) ? location.hash.slice(1) : 'home';
-  $('#main').innerHTML = ({home:homePage,learn:learnPage,practice:practicePage,song:songPage,library:libraryPage,feedback:feedbackPage,profile:profilePage})[route]();
+  $('#main').innerHTML = ({home:homePage,learn:learnPage,practice:practicePage,song:songPage,library:libraryPage,feedback:feedbackPage,profile:profilePage,account:pianoAccount.page})[route]();
   $('#breadcrumb').textContent = routeTitles[route];
   $$('.nav-link').forEach(a => { a.classList.toggle('active',a.dataset.route === route); if(a.dataset.route===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current'); });
   document.title = `${routeTitles[route]} · phím. — ${state.language==='en'?'Understand, then play':'Hiểu rồi chơi'}`;
@@ -520,3 +556,5 @@ window.addEventListener('pagehide',persistLesson);
 setInterval(()=>{if(!document.hidden&&route==='practice'&&$('#lesson-modal').hidden){state.practiceSeconds+=5;save();}},5000);
 render();
 const initialLessonHash=location.hash.match(/^#lesson-(\d+)$/);if(initialLessonHash)openLesson(Number(initialLessonHash[1]));
+
+void pianoAccount.init();
