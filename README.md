@@ -1,4 +1,4 @@
-# phím. — Hiểu rồi chơi
+# phím. — Chạm phím, chạm cảm xúc.
 
 Website học piano bằng tiếng Việt và tiếng Anh, phục vụ trực tiếp bằng GitHub Pages.
 

@@ -166,7 +166,7 @@ function termCards(list) { return list.length ? list.map(term=>`<article class="
 function languagePicker() { return `<label class="language-picker lesson-language"><span>${t('language')}</span><select data-language aria-label="${t('language')}"><option value="vi" lang="vi" ${state.language==='vi'?'selected':''}>Tiếng Việt</option><option value="en" lang="en" ${state.language==='en'?'selected':''}>English</option></select></label>`; }
 function renderShell() {
   document.documentElement.lang=state.language;
-  const content={'.brand-caption':'tagline','.nav-label':'space','.sidebar-note p':'sideStory','.sidebar-note>span:last-child':'curiosityStart','.sidebar-bottom strong':'newcomer','.sidebar-bottom div>span':'beginning','.skip-link':'skip'};
+  const content={'.brand-caption':'tagline','.nav-label':'space','.sidebar-bottom strong':'newcomer','.sidebar-bottom div>span':'beginning','.skip-link':'skip'};
   for(const [selector,key] of Object.entries(content))$(selector).innerHTML=t(key);
   $$('.brand,.header-logo').forEach(el=>el.setAttribute('aria-label',t('brandHome')));$('.main-nav').setAttribute('aria-label',t('nav'));$('.close-modal').setAttribute('aria-label',t('close'));
   $$('.nav-link').forEach(a=>$('span',a).textContent=t(a.dataset.route));
@@ -184,7 +184,7 @@ function render() {
   $('#main').innerHTML = ({home:homePage,learn:learnPage,practice:practicePage,song:songPage,library:libraryPage,feedback:feedbackPage,account:pianoAccount.page})[route]();
   $('#breadcrumb').textContent = routeTitles[route];
   $$('.nav-link').forEach(a => { a.classList.toggle('active',a.dataset.route === route); if(a.dataset.route===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current'); });
-  document.title = `${routeTitles[route]} · phím. — ${state.language==='en'?'Understand, then play':'Hiểu rồi chơi'}`;
+  document.title = `${routeTitles[route]} · phím. — ${t('tagline')}`;
 }
 
 let pianoInput=null;
