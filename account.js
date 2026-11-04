@@ -6,6 +6,7 @@ const pianoAccount = (() => {
   let client, user, mode = 'login', message = '', busy = false;
   let syncStatus = '', lastSynced = '', syncing = false, queued = false;
   let generation = 0;
+  let fullLessonAccess = false;
 
   const redirectTo = action => {
     const url = new URL(callback);
@@ -113,16 +114,32 @@ const pianoAccount = (() => {
     }
   }
 
+  async function loadLessonAccess(owner, version) {
+    try {
+      const {data, error} = await client.from('phim_full_lesson_access')
+        .select('user_id').eq('user_id', owner).maybeSingle();
+      if (version !== generation || error || data?.user_id !== owner) return;
+      fullLessonAccess = true;
+      if (!activeLesson && ['home', 'learn'].includes(route)) render();
+      const lessonLink = location.hash.match(/^#lesson-(\d+)$/);
+      if (lessonLink && !activeLesson) openLesson(Number(lessonLink[1]));
+    } catch {
+      // Use the standard lesson order if the grant cannot be verified.
+    }
+  }
+
   function receiveSession(event, session) {
     const next = session?.user || null;
     if (event === 'PASSWORD_RECOVERY') mode = 'recovery';
     else if (!next && mode === 'recovery') mode = 'login';
     if (next?.id !== user?.id) {
       generation++;
+      fullLessonAccess = false;
       lastSynced = '';
       syncStatus = '';
       user = next;
       switchLearner(next?.id || null);
+      if (next) void loadLessonAccess(next.id, generation);
     } else {
       user = next;
     }
@@ -247,5 +264,5 @@ const pianoAccount = (() => {
     if (!document.hidden) void sync(true);
   });
 
-  return {page, init, sync};
+  return {page, init, sync, hasFullLessonAccess: () => fullLessonAccess && user?.id === learnerAccountId};
 })();

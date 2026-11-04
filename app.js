@@ -75,13 +75,16 @@ function lessonArt(id) {
   return `<svg viewBox="0 0 180 105" aria-hidden="true"><path d="M35 24h110M35 36h110M35 48h110M35 60h110M35 72h110M67 84h39" stroke="#c6c2d3" stroke-width="1"/><g fill="#8c83a0" stroke="none"><ellipse cx="86" cy="84" rx="9" ry="6" transform="rotate(-18 86 84)"/><ellipse cx="86" cy="72" rx="9" ry="6" transform="rotate(-18 86 72)"/><ellipse cx="86" cy="60" rx="9" ry="6" transform="rotate(-18 86 60)"/></g><path d="M94 83V21" stroke="#8c83a0" stroke-width="2.4"/><path d="m26 44-4-5m6 2-7 1m131 13 7-4m-3-2 1 8" stroke="#bbb0ce"/></svg>`;
 }
 
+function canOpenLesson(id) {
+  return FLOW.canOpen(id, state.completed, COURSE_TOTAL, pianoAccount.hasFullLessonAccess());
+}
 function lessonCards(wide = false, list = lessonData.slice(0,3)) {
   return `<div class="lesson-grid ${wide ? 'wide-lessons' : ''}">${list.map(l => {
-    const unlocked=window.PHIM_LESSON_FLOW.canOpen(l.id,state.completed),done=state.completed.includes(l.id);
+    const unlocked=canOpenLesson(l.id),done=state.completed.includes(l.id);
     return `<article class="lesson-card ${unlocked?'':'lesson-locked'}"><div class="lesson-art art-${l.color}"><span class="art-number">${pad(l.id)}</span>${lessonArt(l.id)}</div>${done?`<span class="done-badge" aria-label="${t('completed')}">${icon('check')}</span>`:''}<div class="lesson-body"><div class="lesson-meta">${l.category} · ${t('lesson')} ${pad(l.id)}</div><h3>${unlocked?`<a href="#lesson-${l.id}" data-lesson="${l.id}">${l.title}</a>`:l.title}</h3><p>${l.description}</p>${unlocked?'':`<p class="lesson-lock">${icon('lock')} ${t('lockedUntil',{n:l.id-1})}</p>`}<div class="lesson-card-footer"><span class="lesson-duration">${icon('clock')}${l.duration}</span><button class="card-action" data-lesson="${l.id}" ${unlocked?'':'disabled'} aria-label="${unlocked?t('openLesson',{title:l.title}):t('lockedUntil',{n:l.id-1})}">${icon(unlocked?(done?'check':'arrow'):'lock')}</button></div></div></article>`;
   }).join('')}</div>`;
 }
-function nextLesson(){return state.sessions[state.lastLesson]&&FLOW.canOpen(state.lastLesson,state.completed,COURSE_TOTAL)&&!state.completed.includes(state.lastLesson)?state.lastLesson:lessonData.find(l=>!state.completed.includes(l.id))?.id||1;}
+function nextLesson(){return state.sessions[state.lastLesson]&&canOpenLesson(state.lastLesson)&&!state.completed.includes(state.lastLesson)?state.lastLesson:lessonData.find(l=>!state.completed.includes(l.id))?.id||1;}
 function homePage() {
   const n = state.completed.length, pct = Math.round(n / COURSE_TOTAL * 100);
   return `<div class="page-heading"><div><h1>${state.profile.displayName?t('welcomeNamed',{name:escapeHTML(state.profile.displayName)}):t('welcome')}</h1><p>${t('welcomeSub')}</p></div></div>
@@ -425,7 +428,7 @@ function renderLesson(focusPage=false){
 }
 function openLesson(id){
  if(!lessonData.some(x=>x.id===id))return;
- if(!FLOW.canOpen(id,state.completed,COURSE_TOTAL)){toast(t('lockedUntil',{n:id-1}));return;}
+ if(!canOpenLesson(id)){toast(t('lockedUntil',{n:id-1}));return;}
  if(activeLesson)persistLesson();
  if($('#lesson-modal').hidden)returnFocus=document.activeElement;
  setLearningMenu(false);
