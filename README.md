@@ -71,11 +71,13 @@ Run all checks with `node --test tests/*.test.cjs` (23 test groups). Browser QA 
 
 ## Accounts and completed lesson sync
 
-The account page at `#account` uses Supabase Auth with email and password and a pinned browser SDK. The public configuration contains only the project URL and publishable key. Supabase stores completed lesson IDs with per-user row-level access. Guest progress can be merged explicitly from the account page. Local data is kept separately per account and guest mode.
+The account page at `#account` uses usernames and passwords for new accounts. The `username-auth` Edge Function maps each normalized username to a reserved internal alias, and Supabase Auth handles password verification and sessions. Apply `supabase/piano-username-auth.sql` before deploying the function and publishing the web client. The function requires the project's publishable API key and applies registration and login quotas in the database. The public configuration contains only the project URL and publishable key.
+
+Supabase stores completed lesson IDs with per-user row-level access. Guest progress can be merged explicitly from the account page. Local data is kept separately per account and guest mode. Accounts created with a username have no self-service password reset.
 
 The SQL in `supabase/piano-progress.sql` defines the deployed schema. If the course grows beyond 20 lessons, extend its lesson ID constraint before publishing new lessons.
 
-For email confirmation and password recovery, configure Auth > URL Configuration on the Supabase dashboard. Set the Site URL to `https://leejongtan.github.io/learningpiano/` and add both exact redirect URLs below.
+Existing email accounts retain their sign-in and password recovery paths. For these accounts, set the Site URL in Auth > URL Configuration to `https://leejongtan.github.io/learningpiano/` and allow the original confirmation and recovery redirects below.
 
 - `https://leejongtan.github.io/learningpiano/?account=confirm`
 - `https://leejongtan.github.io/learningpiano/?account=reset`

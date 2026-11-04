@@ -32,7 +32,7 @@ const pianoAccount = (() => {
 
   function signedIn() {
     return `<h2>${t('accountSignedIn')}</h2>
-      <p class="account-email">${escapeHTML(user.email || '')}</p>
+      <p class="account-email">${escapeHTML(user.app_metadata?.phim_username || user.email || '')}</p>
       <p>${t('accountDevice')}</p>
       <p class="account-sync" data-account-sync role="status">${syncStatus ? t(syncStatus) : ''}</p>
       <div class="account-actions">
@@ -44,20 +44,23 @@ const pianoAccount = (() => {
   }
 
   function form() {
-    const needsEmail = mode !== 'recovery';
-    const needsPassword = mode !== 'reset';
-    const title = {login:'accountLogin', signup:'accountSignup', reset:'accountReset', recovery:'accountNewPassword'}[mode];
+    const byUsername = mode === 'login' || mode === 'signup';
+    const title = {login:'accountLogin', legacy:'accountLegacyLogin', signup:'accountSignup', reset:'accountReset', recovery:'accountNewPassword'}[mode];
     return `<h2>${t(title)}</h2>
-      <p>${t(mode === 'signup' || mode === 'reset' ? 'accountEmailHint' : 'accountFormHint')}</p>
-      <form id="account-form">
-        ${needsEmail ? `<label for="account-email">Email</label>
+      <p>${t(mode === 'signup' ? 'accountUsernameHint' : mode === 'reset' ? 'accountEmailHint' : 'accountFormHint')}</p>
+      <form id="account-form" method="post">
+        ${byUsername ? `<label for="account-username">${t('accountUsername')}</label>
+          <input id="account-username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="24" required>`
+        : mode !== 'recovery' ? `<label for="account-email">Email</label>
           <input id="account-email" type="email" name="email" autocomplete="username" maxlength="254" required>` : ''}
-        ${needsPassword ? `<label for="account-password">${t('accountPassword')}</label>
-          <div class="account-password"><input id="account-password" type="password" name="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" ${mode === 'login' ? '' : 'minlength="8"'} required>
+        ${mode !== 'reset' ? `<label for="account-password">${t('accountPassword')}</label>
+          <div class="account-password"><input id="account-password" type="password" name="password" autocomplete="${mode === 'signup' || mode === 'recovery' ? 'new-password' : 'current-password'}" ${mode === 'signup' || mode === 'recovery' ? 'minlength="8"' : ''} required>
           <button type="button" class="button secondary" data-account-action="password" aria-pressed="false">${t('accountShow')}</button></div>` : ''}
         <button type="submit" class="button account-submit" ${busy || !client ? 'disabled' : ''}>${t(busy ? 'accountWorking' : mode === 'reset' ? 'accountSend' : mode === 'recovery' ? 'accountUpdate' : title)}</button>
       </form>
       ${mode === 'login' ? `<div class="account-links"><button class="text-button" data-account-mode="signup">${t('accountSignup')}</button>
+      <button class="text-button" data-account-mode="legacy">${t('accountLegacyLogin')}</button></div>` :
+      mode === 'legacy' ? `<div class="account-links"><button class="text-button" data-account-mode="login">${t('accountBack')}</button>
       <button class="text-button" data-account-mode="reset">${t('accountReset')}</button></div>` :
       mode === 'recovery' ? '' : `<button class="text-button" data-account-mode="login">${t('accountBack')}</button>`}`;
   }
@@ -183,11 +186,27 @@ const pianoAccount = (() => {
 
   function errorMessage(error) {
     if (error.code === 'invalid_credentials') return 'accountInvalid';
+    if (error.code === 'invalid_username') return 'accountUsernameInvalid';
+    if (error.code === 'username_taken') return 'accountUsernameTaken';
+    if (error.code === 'invalid_password') return 'accountPasswordLength';
     if (error.code === 'email_not_confirmed') return 'accountUnverified';
     if (error.code === 'over_email_send_rate_limit' || error.status === 429) return 'accountRate';
     if (error.code === 'email_address_not_authorized' || error.code === 'email_provider_disabled') return 'accountMailBlocked';
     if (error.code === 'weak_password') return 'accountWeak';
     return 'accountFailed';
+  }
+
+  async function usernameRequest(action, username, password) {
+    if (!/^[a-z0-9_]{3,24}$/.test(username)) throw {code:'invalid_username'};
+    const {url, key} = window.PHIM_ACCOUNT_CONFIG;
+    const response = await fetch(url + '/functions/v1/username-auth', {
+      method:'POST',
+      headers:{apikey:key, 'Content-Type':'application/json'},
+      body:JSON.stringify({action, username, password}),
+    });
+    const data = await response.json();
+    if (!response.ok) throw {code:data.code, status:response.status};
+    return data;
   }
 
   document.addEventListener('submit', async event => {
@@ -196,6 +215,7 @@ const pianoAccount = (() => {
     if (!client || busy) return;
     const fields = new FormData(event.target);
     const email = String(fields.get('email') || '').trim();
+    const username = String(fields.get('username') || '').trim().toLowerCase();
     const password = String(fields.get('password') || '');
     const action = mode;
     const submit = event.target.querySelector('[type=submit]');
@@ -204,22 +224,38 @@ const pianoAccount = (() => {
     showMessage('accountWorking');
     try {
       let response;
-      if (action === 'signup') response = await client.auth.signUp({email,password,options:{emailRedirectTo:redirectTo('confirm')}});
+      if (action === 'signup' || action === 'login') {
+        if (action === 'signup') {
+          await usernameRequest('signup', username, password);
+          mode = 'login';
+          showMessage('accountCreated');
+          return;
+        }
+        const tokens = await usernameRequest('login', username, password);
+        response = await client.auth.setSession(tokens);
+      }
       else if (action === 'reset') response = await client.auth.resetPasswordForEmail(email,{redirectTo:redirectTo('reset')});
       else if (action === 'recovery') response = await client.auth.updateUser({password});
       else response = await client.auth.signInWithPassword({email,password});
       if (response.error) throw response.error;
       if (action === 'recovery') { mode = 'login'; void sync(true); }
-      if (action === 'signup' || action === 'reset') mode = 'login';
+      if (action === 'reset') mode = 'legacy';
       showMessage(action === 'recovery' ? 'accountUpdated' :
-        action === 'reset' || (action === 'signup' && !response.data?.session) ? 'accountCheckMail' : 'accountWelcome');
+        action === 'reset' ? 'accountCheckMail' : 'accountWelcome');
       const field = event.target.querySelector('[name=password]');
       if (field) field.value = '';
     } catch (error) {
-      showMessage(errorMessage(error));
+      showMessage(action === 'legacy' && error.code === 'invalid_credentials' ? 'accountLegacyInvalid' : errorMessage(error));
     } finally {
       busy = false;
-      if (action !== mode) refresh();
+      if (action !== mode) {
+        refresh();
+        const usernameField = $('#account-username');
+        if (action === 'signup' && usernameField) {
+          usernameField.value = username;
+          $('#account-password')?.focus();
+        }
+      }
       submit.disabled = false;
     }
   });
@@ -230,7 +266,7 @@ const pianoAccount = (() => {
       mode = tab.dataset.accountMode;
       showMessage('');
       refresh();
-      $('#account-email')?.focus();
+      $('#account-username, #account-email')?.focus();
       return;
     }
     const button = event.target.closest('[data-account-action]');
