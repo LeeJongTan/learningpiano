@@ -101,7 +101,7 @@
       Q('Trong vòng đệm minh họa, B3–D4–G4 thuộc hợp âm nào?','In the example accompaniment, which chord contains B3–D4–G4?',['G trưởng','C trưởng','F trưởng','B thứ'],['G major','C major','F major','B minor'],'Sắp lại G–B–D cho thấy đây là G trưởng, với B ở thấp nhất.','Reordering as G–B–D identifies G major, with B in the bass.')
     ]
   };
-  const steps={"1": [0, 0, 1, 1, 1, 1], "2": [0, 1, 1, 1, 1, 0], "3": [0, 0, 1, 1, 1, 0], "4": [0, 0, 0, 1, 1, 1], "5": [0, 0, 0, 1, 1, 1], "6": [0, 0, 1, 1, 1, 0], "7": [0, 0, 0, 1, 1, 1], "8": [0, 0, 1, 0, 2, 1], "9": [1, 1, 1, 0, 0, 1], "10": [0, 0, 1, 1, 1, 1], "11": [0, 0, 0, 0, 1, 1], "12": [0, 0, 0, 0, 1, 1]};
+  const steps={"1": [0, 0, 1, 1, 1, 1], "2": [0, 1, 1, 1, 1, 0], "3": [0, 0, 1, 1, 1, 0], "4": [0, 0, 0, 1, 0, 1], "5": [0, 0, 0, 1, 1, 1], "6": [0, 0, 1, 1, 1, 0], "7": [0, 0, 0, 1, 1, 1], "8": [0, 0, 1, 0, 2, 1], "9": [1, 1, 1, 0, 0, 1], "10": [0, 0, 1, 1, 1, 1], "11": [0, 0, 0, 0, 1, 1], "12": [0, 0, 0, 0, 1, 1]};
   for(const [id,questions] of Object.entries(bank)) questions.forEach((q,i)=>{
     q.id=Number(id)+'-'+(i+1);q.step=steps[id][i];
   });
