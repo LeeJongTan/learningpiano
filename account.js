@@ -38,7 +38,6 @@ const pianoAccount = (() => {
       <div class="account-actions">
         <button class="button" data-account-action="sync">${t('accountSync')}</button>
         ${readLearner(STORAGE_KEY).completed.length ? `<button class="button soft" data-account-action="import">${t('accountImport')}</button>` : ''}
-        <a href="#profile" class="button secondary">${t('profile')}</a>
         <button class="button secondary" data-account-action="logout">${t('accountLogout')}</button>
       </div>`;
   }
