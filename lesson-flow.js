@@ -2,8 +2,8 @@
 (function(root){
   const initialPractice=()=>({mode:'train',index:0,failures:0,lastWrong:null,redirected:false});
   const initial=()=>({stage:'read',readIndex:0,readSeen:0,index:0,mistakes:0,choice:null,feedback:null,reviewRequired:false,missed:[],orders:[],practice:initialPractice()});
-  function canOpen(id,completed,total=20){
-    return Number.isInteger(id)&&id>=1&&id<=total&&Array.from({length:id-1},(_,i)=>i+1).every(n=>completed.includes(n));
+  function canOpen(id,completed,total=20,fullAccess=false){
+    return Number.isInteger(id)&&id>=1&&id<=total&&(fullAccess===true||Array.from({length:id-1},(_,i)=>i+1).every(n=>completed.includes(n)));
   }
   function readStep(flow,index,total){
     if(flow.stage!=='read'||!Number.isInteger(index)||index<0||index>=total||index>flow.readSeen+1)return flow;

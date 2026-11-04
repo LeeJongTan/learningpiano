@@ -127,3 +127,12 @@ test('all 41 reading figures render without exceptions, including multi-note fla
  let count=0;for(const steps of Object.values(readings))for(const step of steps){const html=sandbox.readingFigure(step);assert.match(html,/<figure/);assert.ok(!html.includes('NaN'));count++;}
  assert.equal(count,41);
 });
+
+test('full access opens valid lessons without unlocking them for standard learners', () => {
+  const completed = [1];
+  assert.equal(flow.canOpen(20, completed, 20, true), true);
+  assert.equal(flow.canOpen(20, completed, 20), false);
+  assert.equal(flow.canOpen(20, completed, 20, 'true'), false);
+  assert.equal(flow.canOpen(21, completed, 20, true), false);
+  assert.deepEqual(completed, [1]);
+});
