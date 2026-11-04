@@ -413,7 +413,7 @@ function scoreSVG(notes,{clef='treble',labels=true,width=Math.max(320,130+notes.
  const tied=tie?`<path d="M${xAt(0)+6} ${tieY}Q${(xAt(0)+xAt(1))/2} ${tieY+21} ${xAt(1)-6} ${tieY}" fill="none" stroke="currentColor" stroke-width="2"/>`:'';
  const marks=articulation?`<path d="M${xAt(1)} ${ys[1]+11}Q${(xAt(1)+xAt(2))/2} ${ys[1]+28} ${xAt(2)} ${ys[2]+11} M${xAt(2)-10} 44q10-20 20 0" fill="none" stroke="currentColor" stroke-width="2"/><circle class="score-dot" cx="${xAt(2)}" cy="42" r="2"/>`:'';
  const alt=t('scoreDescription',{clef:t(clef==='bass'?'bassClef':'trebleClef'),notes:descriptions.join('; ')});
- return `<svg viewBox="0 0 ${width} ${height}" role="img" ${notes.length>6?'style="min-width:360px"':''} aria-label="${escapeHTML(alt)}"><title>${escapeHTML(alt)}</title><g class="score-staff">${lines}<g class="score-clef">${clefShape}</g>${keyGlyph}${time?`<text x="${timeX}" y="70" class="score-time">${time}</text><text x="${timeX}" y="91" class="score-time">${denominator}</text>`:''}${heads}${beams}${tied}${marks}${repeats}${bars}</g></svg>`;
+ return `<svg class="lesson-score" viewBox="0 0 ${width} ${height}" role="img" style="--score-min-width:${Math.ceil(width*.69)}px" aria-label="${escapeHTML(alt)}"><title>${escapeHTML(alt)}</title><g class="score-staff">${lines}<g class="score-clef">${clefShape}</g>${keyGlyph}${time?`<text x="${timeX}" y="70" class="score-time">${time}</text><text x="${timeX}" y="91" class="score-time">${denominator}</text>`:''}${heads}${beams}${tied}${marks}${repeats}${bars}</g></svg>`;
 }
 function rhythmValues(){
  const values=[
