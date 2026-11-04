@@ -395,12 +395,36 @@ function scoreSVG(notes,{clef='treble',labels=true,width=620,time='',denominator
  const alt=t('scoreDescription',{clef:t(clef==='bass'?'bassClef':'trebleClef'),notes:descriptions.join('; ')});
  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHTML(alt)}"><title>${escapeHTML(alt)}</title><g class="score-staff">${lines}<text x="25" y="${clef==='bass'?83:91}" class="score-clef">${clef==='bass'?'𝄢':'𝄞'}</text>${keyGlyph}${time?`<text x="86" y="70" class="score-time">${time}</text><text x="86" y="91" class="score-time">${denominator}</text>`:''}${heads}${tied}${repeats}${time?`<line class="score-bar" x1="${width-15}" x2="${width-15}" y1="48" y2="96"/>`:''}</g></svg>`;
 }
+function rhythmValues(){
+ const values=[
+  ['4',['Nốt tròn','Whole note'],['Dấu lặng tròn','Whole rest']],
+  ['2',['Nốt trắng','Half note'],['Dấu lặng trắng','Half rest']],
+  ['1',['Nốt đen','Quarter note'],['Dấu lặng đen','Quarter rest']],
+  ['½',['Nốt móc đơn','Eighth note'],['Dấu lặng móc đơn','Eighth rest']]
+ ];
+ const restShapes=[
+  '<rect x="22" y="13" width="20" height="5" fill="currentColor"/>',
+  '<rect x="22" y="15" width="20" height="5" fill="currentColor"/>',
+  '<path d="m29 6 9 10-6 6 6 8c-10-5-14 2-6 8-11-4-12-12-3-13l-5-6 7-6z" fill="currentColor"/>',
+  '<path d="M37 14 29 34M26 15q4 8 11-1" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="26" cy="15" r="3.5" fill="currentColor"/>'
+ ];
+ const staff='<path d="M4 6h56M4 13h56M4 20h56M4 27h56M4 34h56" stroke="currentColor" stroke-opacity=".32"/>';
+ const symbol=(shape,label)=>`<svg viewBox="0 0 64 40" role="img" aria-label="${escapeHTML(L(label))}">${shape}</svg>`;
+ return `<div class="note-values">${values.map(([beats,note,rest],i)=>{
+  const head=i===0
+   ? '<ellipse cx="32" cy="30" rx="9" ry="5.5" fill="none" stroke="currentColor" stroke-width="2.5"/>'
+   : `<ellipse cx="29" cy="30" rx="6.5" ry="4.5" transform="rotate(-18 29 30)" fill="${i===1?'none':'currentColor'}" stroke="currentColor" stroke-width="2"/>`;
+  const stem=i===0?'':'<path d="M35 29V6" stroke="currentColor" stroke-width="2"/>';
+  const flag=i===3?'<path d="M35 5c1 6 11 8 11 15 0 3-2 6-4 8 3-7 1-10-7-15z" fill="currentColor"/>':'';
+  return `<div>${symbol(head+stem+flag,note)}${symbol(staff+restShapes[i],rest)}<span>${beats} ${L(['phách',beats==='1'?'beat':'beats'])}</span></div>`;
+ }).join('')}</div>`;
+}
 function readingFigure(s){
  let body='';const opts={clef:s.clef||'treble',durations:s.durations||[],harmony:s.harmony||false,spelling:s.spelling||[],time:s.time||''};
  const labels=items=>`<div class="visual-labels">${items.map(x=>`<span>${x}</span>`).join('')}</div>`;
  if(s.kind==='map')body=`<div class="map-piano">${['C','D','E','F','G','A','B'].map((n,i)=>`<div>${n}${[0,1,3,4,5].includes(i)?'<b></b>':''}</div>`).join('')}</div>${labels([t('twoBlack'),t('threeBlack')])}`;
  else if(s.kind==='keyboard')body=`<div class="letter-keys">${['C','D','E','F','G','A','B','C'].map(x=>`<span>${x}</span>`).join('')}</div>`;
- else if(['values','rests'].includes(s.kind))body=`<div class="note-values">${[['𝅝','𝄻','4'],['𝅗𝅥','𝄼','2'],['♩','𝄽','1'],['♪','𝄾','½']].map(([n,r,b])=>`<div><strong>${n}</strong><strong>${r}</strong><span>${b} ${t('beatUnit',{n:b==='1'?1:2})}</span></div>`).join('')}</div><p>${t('restLegend')}</p>`;
+ else if(['values','rests'].includes(s.kind))body=`${rhythmValues()}<p>${t('restLegend')}</p>`;
  else if(s.kind==='grand')body=`<div class="grand-staff">${scoreSVG([60])}${scoreSVG([60],{clef:'bass'})}</div>${labels([t('sameMiddleC')])}`;
  else if(s.kind==='meter')body=scoreSVG([60,62,64,65],{time:'4'})+scoreSVG([60,62,64],{time:'3'});
  else if(s.kind==='tie')body=scoreSVG([60,60],{tie:true})+labels([t('tieExample')]);
